@@ -42,6 +42,7 @@ import Sidebar from "@/components/Sidebar";
 import IndependentWorkspaceView from "@/components/IndependentWorkspaceView";
 import LocalReportExport from "@/components/LocalReportExport";
 import TerminalWorkspaceView from "@/components/TerminalWorkspaceView";
+import AtlasChatView from "@/components/AtlasChatView";
 import PastRunsView from "@/components/PastRunsView";
 import EmailReportView from "@/components/EmailReportView";
 import { RunDetails } from "@/components/RunDetails";
@@ -49,7 +50,7 @@ import { TrustToast } from "@/components/TrustToast";
 import FeedbackView from "@/components/FeedbackView";
 import { ProInlineCta } from "@/components/ProCta";
 
-export type View = "overview" | "issues" | "agents" | "history" | "email" | "feedback" | "pr-reviews" | "integrations" | "members" | "terminal";
+export type View = "chat" | "overview" | "issues" | "agents" | "history" | "email" | "feedback" | "pr-reviews" | "integrations" | "members" | "terminal";
 
 const TRUST_BANNER =
   "Atlas Arena is independent. Connect providers to enable live agent runs; no scans are started automatically.";
@@ -62,7 +63,7 @@ export default function App() {
   const [run, setRun] = useState<LoadedRun | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [view, setView] = useState<View>("overview");
+  const [view, setView] = useState<View>("chat");
   const [auth, setAuth] = useState<AuthStatus | null>(null);
   const [runs, setRuns] = useState<RunsPayload | null>(null);
   const [emailPurpose, setEmailPurpose] = useState<"report" | "verify">("report");
@@ -208,6 +209,7 @@ export default function App() {
 
   useEffect(() => {
     if (initialViewAppliedRef.current || !run) return;
+    if (view === "chat") { initialViewAppliedRef.current = true; return; }
     if (run.finished) {
       initialViewAppliedRef.current = true;
       setView("overview");
@@ -341,7 +343,9 @@ export default function App() {
             key={`${activeRun ?? "launched"}:${view}:${selectedId ?? ""}`}
             className="animate-page-in space-y-6"
           >
-          {view === "email" ? (
+          {view === "chat" ? (
+            <AtlasChatView />
+          ) : view === "email" ? (
             <div className="space-y-6">
               <LocalReportExport run={run} />
             <EmailReportView
