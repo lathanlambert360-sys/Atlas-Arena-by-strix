@@ -12,7 +12,7 @@ From the **atlas-hq-independent branch** at the repository root:
 bash atlas_hq/start.sh
 ```
 
-Open the exact tokened `http://127.0.0.1:8765/?token=...` URL printed at startup
+Open the exact tokened `http://127.0.0.1:8917/?token=...` URL printed at startup
 in the browser on the same host (on Windows with WSL2 forwarding enabled,
 that address usually works in Windows Chrome). The URL is exchanged for an
 HttpOnly, SameSite=Strict viewer-session cookie; all reads and writes require
@@ -85,3 +85,33 @@ existing stdout to `emit.py log`. Command labels are not executed.
 Every target still requires program-specific scope checks and human authorization
 before executing security tests. This project is an organizer and evidence viewer,
 not an automated scanner.
+
+
+## Actual connections (local adapter)
+
+The local Integrations tab now probes the *real* HexStrike health endpoint on
+127.0.0.1:8888 and detects available Kali, Codex, REA, GitHub CLI, BugTraceAI
+and AdStrike components. Installed software is labelled `installed` or
+`source_present`; it is not represented as a live MCP connection without
+an authenticated MCP session. Cloud displays unavailable separately.
+
+The **Kali Terminal** tab displays observed terminal tool records from the
+selected run; the original Agents view displays agent trees and full transcripts.
+To use your existing Codex CLI as the (human-started) agent engine, create an
+operator prompt file and run:
+
+```bash
+python3 atlas_hq/codex_bridge.py --run first-codex-session \\
+  --target ./authorized-project --scope-confirmed \\
+  --workdir ./authorized-project --prompt-file ./authorized-prompt.txt
+```
+
+The adapter checks the local authenticated collector, requires explicit scope
+confirmation, starts `codex exec --json --sandbox read-only` and ingests **real**
+agent messages and terminal-tool output. It does not assume that using your
+ChatGPT subscription supplies a general-purpose OpenAI API key, and it never
+launches an agent automatically. When explicitly needed for a user-controlled
+local repository task, `--sandbox workspace-write` can be selected.
+
+Cloud deployment remains a Vercel UI; the local viewer owns real Kali state.
+All local browser reads require a tokened session, not merely a loopback URL.
