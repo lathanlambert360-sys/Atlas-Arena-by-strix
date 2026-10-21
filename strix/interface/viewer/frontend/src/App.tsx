@@ -39,6 +39,7 @@ import {
 import { SIGNUP_URL, DEMO_URL, ctaUrl, trackCta } from "@/lib/cta";
 import { runTitle } from "@/lib/target-utils";
 import Sidebar from "@/components/Sidebar";
+import IndependentWorkspaceView from "@/components/IndependentWorkspaceView";
 import PastRunsView from "@/components/PastRunsView";
 import EmailReportView from "@/components/EmailReportView";
 import { RunDetails } from "@/components/RunDetails";
@@ -46,7 +47,7 @@ import { TrustToast } from "@/components/TrustToast";
 import FeedbackView from "@/components/FeedbackView";
 import { ProInlineCta } from "@/components/ProCta";
 
-export type View = "overview" | "issues" | "agents" | "history" | "email" | "feedback";
+export type View = "overview" | "issues" | "agents" | "history" | "email" | "feedback" | "pr-reviews" | "integrations" | "members";
 
 const TRUST_BANNER =
   "Atlas Arena is independent. Connect providers to enable live agent runs; no scans are started automatically.";
@@ -355,6 +356,8 @@ export default function App() {
               defaultEmail={auth?.email ?? null}
               onExit={(dest) => setView(dest)}
             />
+          ) : view === "pr-reviews" || view === "integrations" || view === "members" ? (
+            <IndependentWorkspaceView page={view} connections={mcpConnections} />
           ) : view === "history" ? (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
@@ -385,11 +388,9 @@ export default function App() {
                 <TabButton active={view === "issues"} onClick={() => userSetView("issues")}>
                   Issues{run.vulnerabilities.length > 0 ? ` (${run.vulnerabilities.length})` : ""}
                 </TabButton>
-                {agentCount > 0 && (
-                  <TabButton active={view === "agents"} onClick={() => userSetView("agents")}>
-                    Agents ({agentCount})
-                  </TabButton>
-                )}
+                <TabButton active={view === "agents"} onClick={() => userSetView("agents")}>
+                  Agents ({agentCount})
+                </TabButton>
               </div>
 
               {view === "overview" ? (
@@ -402,7 +403,7 @@ export default function App() {
                   finished={run.finished}
                   onOpenEmail={openEmailFromOverview}
                 />
-              ) : view === "agents" && agentCount > 0 ? (
+              ) : view === "agents" ? (
                 <AgentsTab run={run} canSteer={canSteer} />
               ) : selected ? (
                 <div className="space-y-4">
