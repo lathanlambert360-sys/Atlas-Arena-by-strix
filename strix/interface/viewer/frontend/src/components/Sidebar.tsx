@@ -7,6 +7,7 @@ import {
   Mail,
   LogOut,
   ChevronsUpDown,
+  Terminal,
 } from "lucide-react";
 import { LuGitPullRequestArrow } from "react-icons/lu";
 import { VscExtensions } from "react-icons/vsc";
@@ -239,6 +240,12 @@ export default function Sidebar({
               count={agentCount > 0 ? agentCount : undefined}
               active={view === "agents"}
               onClick={() => onSelectView("agents")}
+            />
+            <NavItem
+              icon={<Terminal className="h-4 w-4" />}
+              label="Kali Terminal"
+              active={view === "terminal"}
+              onClick={() => onSelectView("terminal")}
             />
             <McpConnectionsPanel connections={mcpConnections} inUse={mcpInUse} />
             <NavItem
