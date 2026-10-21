@@ -15,6 +15,7 @@ import sqlite3
 from datetime import datetime, timezone
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from http.cookies import SimpleCookie
 from pathlib import Path
 from urllib.parse import urlsplit, parse_qs
 
@@ -112,6 +113,23 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         url = urlsplit(self.path)
+        query_token = parse_qs(url.query).get("token", [None])[0]
+        if query_token and secrets.compare_digest(query_token, self.server.token):
+            self.send_response(303)
+            self.send_header("Location", url.path or "/")
+            self.send_header("Set-Cookie", "atlas_hq_session=" + self.server.token + "; Path=/; HttpOnly; SameSite=Strict")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            return
+        cookies = SimpleCookie()
+        try:
+            cookies.load(self.headers.get("Cookie", ""))
+            session = cookies["atlas_hq_session"].value if "atlas_hq_session" in cookies else ""
+        except Exception:
+            session = ""
+        header_token = self.headers.get("X-Atlas-HQ-Token", "")
+        if not (secrets.compare_digest(session, self.server.token) or secrets.compare_digest(header_token, self.server.token)):
+            return self.reply(403, {"ok": False, "error": "viewer_session_required"})
         if not url.path.startswith("/api/"):
             if url.path not in ("/", "/index.html") and not (self.directory and (Path(self.directory) / url.path.lstrip("/")).is_file()):
                 self.path = "/index.html"
@@ -256,7 +274,7 @@ def main():
     server = ThreadingHTTPServer((args.host, args.port), handler)
     server.db = args.db
     server.token = token
-    print(f"Atlas HQ independent local viewer: http://127.0.0.1:{args.port}/", flush=True)
+    print(f"Atlas HQ independent local viewer: http://127.0.0.1:{args.port}/?token={token}", flush=True)
     print("Data stays in", args.db, "- event ingestion requires the local token file", flush=True)
     try:
         server.serve_forever(poll_interval=0.3)
