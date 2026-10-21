@@ -86,6 +86,7 @@ def main():
     p.add_argument("--file", required=True, type=Path)
 
     args = ap.parse_args()
+    token = args.token_file.read_text().strip()
     if args.kind == "init":
         event = {"run": args.run, "kind": "run", "data": {
             "run_id": args.run, "run_name": args.run, "status": "running",
@@ -123,7 +124,7 @@ def main():
     elif args.kind == "report":
         event = {"run": args.run, "kind": "report", "data": {"markdown": args.file.read_text()}}
     elif args.kind == "finish":
-        raw = call(args.url, "/api/run?" + urlencode({"run": args.run}))
+        raw = call(args.url, "/api/run?" + urlencode({"run": args.run}), token=token)
         if not raw.get("run_id"):
             raise ValueError("The requested run was not initialized")
         raw.update({"status": args.status, "finished": True, "end_time": now()})
@@ -132,7 +133,6 @@ def main():
         event = json.loads(args.file.read_text())
         if not isinstance(event, dict):
             raise ValueError("Event file must contain a JSON object")
-    token = args.token_file.read_text().strip()
     response = call(args.url, "/api/event", token=token, payload=event)
     print(json.dumps(response))
 
