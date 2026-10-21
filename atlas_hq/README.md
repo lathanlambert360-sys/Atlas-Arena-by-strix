@@ -115,3 +115,29 @@ local repository task, `--sandbox workspace-write` can be selected.
 
 Cloud deployment remains a Vercel UI; the local viewer owns real Kali state.
 All local browser reads require a tokened session, not merely a loopback URL.
+
+## Atlas Chat — use the dashboard as your working interface
+
+Open the local token-authenticated dashboard in Chrome and select **Atlas Chat**
+(the first sidebar item). It now starts on this tab, while the original
+Overview, Issues, Agents, Kali Terminal, Past Runs, Reports, MCP Connections,
+PR Reviews, Integrations and Members remain available.
+
+Atlas Chat runs the separately authenticated **Codex CLI** on the Kali host.
+To connect it, click **Connect Codex** in the chat tab, follow the device-login
+address and code displayed on screen, and approve the authentication in your
+browser. Once approved, the status turns green and you can send chat messages
+without returning to a terminal. Conversations persist locally in SQLite;
+sequential turns reuse the same Codex thread. The engine runs in Codex's
+read-only sandbox. It never starts scans merely because the UI is open.
+
+The user’s ChatGPT conversation, ChatGPT memory, and ChatGPT-hosted Strix Core
+MCP account authorization are *not* transferred into the Codex session. This
+is a distinct local AI session with its own runtime. The currently connected
+Strix Core plugin is not a Strix paid-scan execution backend for Atlas HQ;
+Strix credits are not required for local chat. No Strix API tokens are stored.
+
+API routes: `GET /api/chat` (session and messages), `POST /api/chat`
+(send message), `POST /api/chat/auth/start` (start Codex device authentication).
+Browser writes require the same-origin, local session cookie; there is no
+publicly exposed chat endpoint or unsandboxed command-execution endpoint.
