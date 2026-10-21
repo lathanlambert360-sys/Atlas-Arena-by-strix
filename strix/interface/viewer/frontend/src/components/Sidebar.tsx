@@ -30,8 +30,8 @@ const DEFAULT_WIDTH = 260;
 const MAX_WIDTH = 400;
 const COLLAPSE_THRESHOLD = 140;
 
-const WIDTH_KEY = "strix_viewer_sidebar_width";
-const COLLAPSE_KEY = "strix_viewer_sidebar_collapsed";
+const WIDTH_KEY = "atlas_arena_sidebar_width";
+const COLLAPSE_KEY = "atlas_arena_sidebar_collapsed";
 
 interface SidebarProps {
   view: View;
@@ -192,12 +192,12 @@ export default function Sidebar({
           <div className="flex flex-row py-1 px-2">
             <div className="flex h-10 w-full flex-row items-center">
               <a
-                href={ctaUrl("https://app.strix.ai", "logo")}
+                href={ctaUrl("https://chatgpt.com/", "logo")}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackCta("logo", "sidebar")}
                 className="flex flex-1 flex-row items-center gap-2 rounded-md py-2 pl-2.5 pr-1 min-w-0 transition-colors hover:bg-[rgba(255,255,255,0.06)]"
-                title="Open Strix Cloud"
+                title="Open Atlas workspace"
               >
                 <span
                   className="flex flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500"
@@ -206,19 +206,19 @@ export default function Sidebar({
                   <span className="text-[10px] font-semibold text-white">S</span>
                 </span>
                 <span className="flex flex-1 flex-row items-center gap-2 min-w-0">
-                  <span className="truncate min-w-0 text-[14px] font-medium text-[#ededed]">Strix</span>
+                  <span className="truncate min-w-0 text-[14px] font-medium text-[#ededed]">ATLAS ARENA</span>
                   <span className="flex h-5 flex-shrink-0 items-center rounded px-2 text-[11px] font-medium text-[#888] bg-[rgba(255,255,255,0.08)]">
                     Local
                   </span>
                 </span>
               </a>
               <a
-                href={ctaUrl("https://app.strix.ai", "logo")}
+                href={ctaUrl("https://chatgpt.com/", "logo")}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackCta("logo", "sidebar")}
                 className="flex flex-none items-center rounded-md px-1.5 py-2 transition-colors hover:bg-[rgba(255,255,255,0.06)]"
-                aria-label="Open Strix Cloud"
+                aria-label="Open Atlas workspace"
               >
                 <ChevronsUpDown className="h-4 w-4 text-[#666]" />
               </a>
@@ -285,7 +285,7 @@ export default function Sidebar({
               onClick={() =>
                 openUpgrade(
                   "pr_reviews",
-                  "Strix reviews every pull request and flags exploitable changes before they merge."
+                  "The configured agents review every pull request and flags exploitable changes before they merge."
                 )
               }
             />
