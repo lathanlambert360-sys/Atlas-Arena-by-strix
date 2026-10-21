@@ -12,8 +12,11 @@ From the **atlas-hq-independent branch** at the repository root:
 bash atlas_hq/start.sh
 ```
 
-Open `http://127.0.0.1:8765/` in the browser on the same host (on Windows with
-WSL2 forwarding enabled, the same address usually works in Windows Chrome).
+Open the exact tokened `http://127.0.0.1:8765/?token=...` URL printed at startup
+in the browser on the same host (on Windows with WSL2 forwarding enabled,
+that address usually works in Windows Chrome). The URL is exchanged for an
+HttpOnly, SameSite=Strict viewer-session cookie; all reads and writes require
+a valid session or local ingest token. Never share the startup URL or token.
 The startup script builds the original React viewer once if its static files
 are stale, then runs a **stdlib-only Python server**. Subsequent starts require
 no Node, Docker, paid Strix credit, remote service or background scan.
