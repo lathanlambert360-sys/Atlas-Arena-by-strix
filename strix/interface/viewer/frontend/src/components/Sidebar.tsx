@@ -203,12 +203,12 @@ export default function Sidebar({
                   className="flex flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500"
                   style={{ width: 20, height: 20 }}
                 >
-                  <span className="text-[10px] font-semibold text-white">S</span>
+                  <span className="text-[10px] font-semibold text-white">∞</span>
                 </span>
                 <span className="flex flex-1 flex-row items-center gap-2 min-w-0">
                   <span className="truncate min-w-0 text-[14px] font-medium text-[#ededed]">ATLAS ARENA</span>
                   <span className="flex h-5 flex-shrink-0 items-center rounded px-2 text-[11px] font-medium text-[#888] bg-[rgba(255,255,255,0.08)]">
-                    Local
+                    HQ
                   </span>
                 </span>
               </a>
