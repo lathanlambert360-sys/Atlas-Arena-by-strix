@@ -222,6 +222,13 @@ export default function Sidebar({
         <nav className="relative min-w-[160px] flex-1 overflow-y-auto overflow-x-clip scrollbar-thin pb-10 pt-2">
           <div className="relative flex flex-col gap-px px-2">
             <NavItem
+              icon={<IoChatbubblesOutline className="h-4 w-4" />}
+              label="Atlas Chat"
+              active={view === "chat"}
+              onClick={() => onSelectView("chat")}
+            />
+            <hr className="mx-0 my-1 h-px w-full border-0 bg-[rgba(255,255,255,0.08)]" />
+            <NavItem
               icon={<ProjectsIcon />}
               label="Pentest Overview"
               active={view === "overview"}
