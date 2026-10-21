@@ -45,7 +45,7 @@ def call(base, route, token=None, payload=None):
 
 def main():
     ap = argparse.ArgumentParser(description="Send observed records to Atlas HQ local viewer")
-    ap.add_argument("--url", default="http://127.0.0.1:8765")
+    ap.add_argument("--url", default="http://127.0.0.1:8917")
     ap.add_argument("--token-file", type=Path, default=DEFAULT_TOKEN)
     commands = ap.add_subparsers(dest="kind", required=True)
 
