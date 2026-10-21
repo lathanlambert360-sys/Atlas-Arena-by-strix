@@ -11,8 +11,9 @@ const CTA_PARAMS =
   "ref=atlas_arena&utm_source=atlas_arena&utm_medium=headquarters&utm_campaign=workspace";
 
 export function ctaUrl(base: string, slug: string): string {
-  const sep = base.includes("?") ? "&" : "?";
-  return `${base}${sep}${CTA_PARAMS}&utm_content=${encodeURIComponent(slug)}`;
+  // Do not append analytics attribution parameters to the workspace URL.
+  void slug;
+  return base;
 }
 
 // Best-effort, anonymous beacon. The local server forwards this to PostHog only
