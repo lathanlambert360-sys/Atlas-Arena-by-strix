@@ -11,7 +11,10 @@ import argparse
 import json
 import os
 import secrets
+import shutil
 import sqlite3
+from urllib.request import urlopen
+from urllib.error import URLError, HTTPError
 from datetime import datetime, timezone
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -57,6 +60,33 @@ def connect(db):
 
 def decode(value):
     return json.loads(value)
+
+
+def live_integrations():
+    """Connection evidence only. Never run CLI commands or read authentication secrets."""
+    entries = {}
+    def mark(name, status, detail):
+        entries[name] = {"status": status, "detail": detail}
+    mark("kali", "connected", "Local SQLite event ingestion is available")
+    try:
+        with urlopen("http://127.0.0.1:8888/health", timeout=0.8) as reply:
+            result = json.load(reply)
+        ok = isinstance(result, dict) and result.get("healthy") is True
+        mark("hexstrike", "connected" if ok else "error", "Loopback HexStrike API returned health status")
+    except (URLError, HTTPError, TimeoutError, ValueError, OSError, json.JSONDecodeError):
+        mark("hexstrike", "offline", "HexStrike local health endpoint is not responding")
+    def available(tool, *candidates):
+        return bool(shutil.which(tool) or any(Path(x).expanduser().is_file() for x in candidates))
+    mark("codex", "installed" if available("codex") else "missing", "Local Codex CLI; authentication and active model access must be verified separately")
+    mark("github", "installed" if available("gh") else "missing", "GitHub CLI; does not imply authenticated access")
+    mark("rea", "installed" if available("rea", "~/tools/rea-skill-cli/node_modules/.bin/rea") else "missing", "REA CLI executable")
+    for name, rel in (
+        ("bugtraceai", "tools/BugTraceAI-CLI"),
+        ("adstrike", "tools/AdStrike"),
+    ):
+        mark(name, "source_present" if (Path.home()/rel).is_dir() else "missing", "Repository present; MCP service registration not verified")
+    mark("strix", "not_connected", "Independent dashboard has no Strix service dependency")
+    return entries
 
 
 def blank_run():
@@ -141,9 +171,12 @@ class Handler(SimpleHTTPRequestHandler):
             row = choose_run(db, name)
             if name and row is None and endpoint in ("run", "transcript", "vulnerabilities", "report"):
                 return self.reply(404, {"error": "run_not_found"})
-            if endpoint == "health":
+            if endpoint in ("health", "integrations"):
+                integrations = live_integrations()
+                if endpoint == "integrations":
+                    return self.reply(200, {"integrations": integrations, "timestamp": now()})
                 return self.reply(200, {"service": "atlas-hq", "status": "online", "execution": "collector_only",
-                    "connectors": {"kali": "local_event_ingestion", "strix": "not_connected", "chatgpt": "not_connected"}})
+                    "connectors": {k: v["status"] for k,v in integrations.items()}})
             if endpoint == "run":
                 return self.reply(200, decode(row["raw"]) if row else blank_run())
             if endpoint == "runs":
