@@ -13,6 +13,7 @@ import os
 import secrets
 import shutil
 import sqlite3
+import chat_backend
 from urllib.request import urlopen
 from urllib.error import URLError, HTTPError
 from datetime import datetime, timezone
@@ -77,7 +78,8 @@ def live_integrations():
         mark("hexstrike", "offline", "HexStrike local health endpoint is not responding")
     def available(tool, *candidates):
         return bool(shutil.which(tool) or any(Path(x).expanduser().is_file() for x in candidates))
-    mark("codex", "installed" if available("codex") else "missing", "Local Codex CLI; authentication and active model access must be verified separately")
+    codex_ready = chat_backend.auth_status()
+    mark("codex", "connected" if codex_ready else ("installed" if available("codex") else "missing"), "Local Codex CLI signed in" if codex_ready else "Local Codex CLI login required")
     mark("github", "installed" if available("gh") else "missing", "GitHub CLI; does not imply authenticated access")
     mark("rea", "installed" if available("rea", "~/tools/rea-skill-cli/node_modules/.bin/rea") else "missing", "REA CLI executable")
     for name, rel in (
@@ -171,6 +173,8 @@ class Handler(SimpleHTTPRequestHandler):
             row = choose_run(db, name)
             if name and row is None and endpoint in ("run", "transcript", "vulnerabilities", "report"):
                 return self.reply(404, {"error": "run_not_found"})
+            if endpoint == "chat":
+                return self.reply(200, chat_backend.state(self.server.db))
             if endpoint in ("health", "integrations"):
                 integrations = live_integrations()
                 if endpoint == "integrations":
@@ -201,6 +205,36 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         endpoint = urlsplit(self.path).path
+        if endpoint in ("/api/chat", "/api/chat/auth/start"):
+            # Chat actions require the local browser session and a same-origin POST.
+            cookies = SimpleCookie()
+            try:
+                cookies.load(self.headers.get("Cookie", ""))
+                session = cookies["atlas_hq_session"].value if "atlas_hq_session" in cookies else ""
+            except Exception:
+                session = ""
+            if not secrets.compare_digest(session, self.server.token):
+                return self.reply(403, {"ok": False, "error": "local_viewer_session_required"})
+            origin = self.headers.get("Origin", "")
+            allowed = {"http://127.0.0.1:" + str(self.server.server_port),
+                       "http://localhost:" + str(self.server.server_port)}
+            if origin not in allowed:
+                return self.reply(403, {"ok": False, "error": "same_origin_required"})
+            try:
+                size = int(self.headers.get("Content-Length", "0"))
+                if not 2 <= size <= 20000:
+                    return self.reply(413, {"ok": False, "error": "invalid_message_size"})
+                payload = json.loads(self.rfile.read(size))
+                if not isinstance(payload, dict):
+                    return self.reply(400, {"ok": False, "error": "invalid_body"})
+            except (ValueError, json.JSONDecodeError):
+                return self.reply(400, {"ok": False, "error": "invalid_body"})
+            if endpoint == "/api/chat/auth/start":
+                ok, msg = chat_backend.device_auth_start()
+                return self.reply(200 if ok else 503, {"ok": ok, "message": msg})
+            code, result = chat_backend.send(self.server.db, self.server.chat_workspace,
+                                             payload.get("message"))
+            return self.reply(code, result)
         if endpoint != "/api/event":
             return self.reply(503, {"ok": False, "error": "independent_execution_or_email_backend_not_configured"})
         if not secrets.compare_digest(self.headers.get("X-Atlas-HQ-Token", ""), self.server.token):
@@ -303,10 +337,13 @@ def main():
         ap.error("Ingest token is invalid or too short")
     with connect(args.db):
         pass
+    with chat_backend.connect(args.db):
+        pass
     handler = partial(Handler, directory=str(args.site.resolve()))
     server = ThreadingHTTPServer((args.host, args.port), handler)
     server.db = args.db
     server.token = token
+    server.chat_workspace = Path(__file__).resolve().parents[1]
     print(f"Atlas HQ independent local viewer: http://127.0.0.1:{args.port}/?token={token}", flush=True)
     print("Data stays in", args.db, "- event ingestion requires the local token file", flush=True)
     try:
