@@ -13,7 +13,6 @@ import { VscExtensions } from "react-icons/vsc";
 import { IoChatbubblesOutline } from "react-icons/io5";
 import { cn } from "@/lib/utils";
 import { ctaUrl, trackCta } from "@/lib/cta";
-import { UpgradeModal } from "@/components/UpgradeModal";
 import type { McpConnectionStatus } from "@/data/serverSource";
 import type { View } from "@/App";
 
@@ -87,15 +86,7 @@ export default function Sidebar({
   });
   const [isResizing, setIsResizing] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [upgradeFeature, setUpgradeFeature] = useState<string | null>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
-
-  // Open the upgrade dialog for a platform feature, recording which feature
-  // drove the open (the dialog's own CTAs track the deeper conversion).
-  const openUpgrade = (slug: string, description: string) => {
-    trackCta(slug, "sidebar");
-    setUpgradeFeature(description);
-  };
 
   const persistWidth = useCallback((w: number) => {
     setWidth(w);
@@ -242,18 +233,14 @@ export default function Sidebar({
               active={view === "issues"}
               onClick={() => onSelectView("issues")}
             />
-            {agentCount > 0 && (
-              <NavItem
-                icon={<Bot className="h-4 w-4" />}
-                label="Agents"
-                count={agentCount}
-                active={view === "agents"}
-                onClick={() => onSelectView("agents")}
-              />
-            )}
-            {mcpConnections.length > 0 && (
-              <McpConnectionsPanel connections={mcpConnections} inUse={mcpInUse} />
-            )}
+            <NavItem
+              icon={<Bot className="h-4 w-4" />}
+              label="Agents"
+              count={agentCount > 0 ? agentCount : undefined}
+              active={view === "agents"}
+              onClick={() => onSelectView("agents")}
+            />
+            <McpConnectionsPanel connections={mcpConnections} inUse={mcpInUse} />
             <NavItem
               icon={<History className="h-4 w-4" />}
               label="Past runs"
@@ -261,14 +248,12 @@ export default function Sidebar({
               active={view === "history"}
               onClick={onOpenHistory}
             />
-            {finished && (
-              <NavItem
-                icon={<Mail className="h-4 w-4" />}
-                label="Export report"
-                active={view === "email"}
-                onClick={onOpenEmail}
-              />
-            )}
+            <NavItem
+              icon={<Mail className="h-4 w-4" />}
+              label="Export report"
+              active={view === "email"}
+              onClick={onOpenEmail}
+            />
             <NavItem
               icon={<IoChatbubblesOutline className="h-4 w-4" />}
               label="Feedback & support"
@@ -281,35 +266,20 @@ export default function Sidebar({
             <NavItem
               icon={<LuGitPullRequestArrow className="h-4 w-4" />}
               label="PR Security Reviews"
-              active={false}
-              onClick={() =>
-                openUpgrade(
-                  "pr_reviews",
-                  "The configured agents review every pull request and flags exploitable changes before they merge."
-                )
-              }
+              active={view === "pr-reviews"}
+              onClick={() => onSelectView("pr-reviews")}
             />
             <NavItem
               icon={<VscExtensions className="h-4 w-4" />}
               label="Integrations"
-              active={false}
-              onClick={() =>
-                openUpgrade(
-                  "integrations",
-                  "Sync findings to Jira, Linear, and Slack so fixes happen where your team already works."
-                )
-              }
+              active={view === "integrations"}
+              onClick={() => onSelectView("integrations")}
             />
             <NavItem
               icon={<Users className="h-4 w-4" />}
               label="Members"
-              active={false}
-              onClick={() =>
-                openUpgrade(
-                  "members",
-                  "Invite your team, set roles, and share findings and run history across your org."
-                )
-              }
+              active={view === "members"}
+              onClick={() => onSelectView("members")}
             />
           </div>
         </nav>
@@ -387,12 +357,6 @@ export default function Sidebar({
       {/* Overlay during resize to prevent text selection. */}
       {isResizing && <div className="fixed inset-0 z-10 cursor-col-resize" />}
 
-      <UpgradeModal
-        open={upgradeFeature !== null}
-        description={upgradeFeature ?? ""}
-        source="sidebar"
-        onClose={() => setUpgradeFeature(null)}
-      />
     </>
   );
 }
