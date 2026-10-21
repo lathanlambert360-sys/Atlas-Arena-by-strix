@@ -40,6 +40,7 @@ import { SIGNUP_URL, DEMO_URL, ctaUrl, trackCta } from "@/lib/cta";
 import { runTitle } from "@/lib/target-utils";
 import Sidebar from "@/components/Sidebar";
 import IndependentWorkspaceView from "@/components/IndependentWorkspaceView";
+import LocalReportExport from "@/components/LocalReportExport";
 import PastRunsView from "@/components/PastRunsView";
 import EmailReportView from "@/components/EmailReportView";
 import { RunDetails } from "@/components/RunDetails";
@@ -340,6 +341,8 @@ export default function App() {
             className="animate-page-in space-y-6"
           >
           {view === "email" ? (
+            <div className="space-y-6">
+              <LocalReportExport run={run} />
             <EmailReportView
               activeRun={activeRun}
               auth={auth}
@@ -351,6 +354,7 @@ export default function App() {
               }}
               onExit={(dest) => setView(dest === "history" ? "history" : "overview")}
             />
+            </div>
           ) : view === "feedback" ? (
             <FeedbackView
               defaultEmail={auth?.email ?? null}
