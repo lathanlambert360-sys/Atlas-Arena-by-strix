@@ -80,7 +80,7 @@ export function UpgradeModal({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Upgrade your plan"
+      aria-label="Integration status"
     >
       <div
         data-state={state}
@@ -97,7 +97,7 @@ export function UpgradeModal({
         </button>
 
         <div>
-          <h2 className="text-lg text-white">Available in Atlas Arena</h2>
+          <h2 className="text-lg text-white">Integration not configured</h2>
           {description && (
             <p className="mt-2 text-base leading-relaxed text-[#e5e5e5]">{description}</p>
           )}
@@ -107,7 +107,7 @@ export function UpgradeModal({
           <div className="rounded-xl border border-[#333] bg-[#0a0a0a] p-4 sm:rounded-lg">
             <div className="mb-3 flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-blue-400" />
-              <span className="text-sm font-medium text-white">Atlas Arena also includes</span>
+              <span className="text-sm font-medium text-white">Available when execution services are configured</span>
             </div>
             <ul className="space-y-2 text-sm text-[#888]">
               {CLOUD_HIGHLIGHTS.map((f) => (
@@ -127,7 +127,7 @@ export function UpgradeModal({
               onClick={() => trackCta("upgrade_try_free", source)}
               className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-white px-4 text-sm font-semibold text-black transition-colors hover:bg-neutral-200"
             >
-              Open Atlas Arena
+              Work with Atlas
               <ExternalLink className="h-3.5 w-3.5" />
             </a>
             <a
@@ -151,7 +151,7 @@ export function UpgradeModal({
               onClick={() => trackCta("upgrade_book_demo", source)}
               className="whitespace-nowrap text-[#aaa] underline underline-offset-2 transition-colors hover:text-white"
             >
-              Try Atlas services
+              Connect providers when ready
             </a>
           </p>
         </div>
