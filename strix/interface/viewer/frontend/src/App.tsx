@@ -297,7 +297,7 @@ export default function App() {
               className="flex items-center gap-1.5 opacity-90 transition-opacity hover:opacity-100 lg:hidden"
               title="Open Atlas workspace"
             >
-              <img src="./logo.png" alt="Atlas Arena" className="w-10 h-8 object-cover" />
+              <span className="inline-flex h-8 w-10 items-center justify-center text-xl font-bold" aria-label="Atlas Arena">∞</span>
               <div className="text-base text-white font-medium tracking-tight">ATLAS ARENA</div>
             </a>
             {run && <LiveIndicator finished={run.finished} />}
