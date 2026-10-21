@@ -54,7 +54,7 @@ def codex_item(item, event_type, agent_id):
     kind = item.get("type", "")
     ident = "cx-" + str(item.get("id") or uuid.uuid4())
     timestamp = now()
-    state = "running" if event_type == "item.started" else (
+    state = "running" if event_type in ("item.started", "item.updated") else (
         "failed" if item.get("status") in ("failed", "error") else "completed"
     )
     if kind == "command_execution":
@@ -79,7 +79,7 @@ def main():
     ap.add_argument("--prompt-file", type=Path, required=True)
     ap.add_argument("--workdir", type=Path, required=True)
     ap.add_argument("--sandbox", choices=("read-only", "workspace-write"), default="read-only")
-    ap.add_argument("--url", default="http://127.0.0.1:8765")
+    ap.add_argument("--url", default="http://127.0.0.1:8917")
     ap.add_argument("--token-file", type=Path, default=TOKEN_FILE)
     args = ap.parse_args()
 
