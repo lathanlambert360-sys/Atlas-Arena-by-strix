@@ -41,6 +41,7 @@ import { runTitle } from "@/lib/target-utils";
 import Sidebar from "@/components/Sidebar";
 import IndependentWorkspaceView from "@/components/IndependentWorkspaceView";
 import LocalReportExport from "@/components/LocalReportExport";
+import TerminalWorkspaceView from "@/components/TerminalWorkspaceView";
 import PastRunsView from "@/components/PastRunsView";
 import EmailReportView from "@/components/EmailReportView";
 import { RunDetails } from "@/components/RunDetails";
@@ -48,7 +49,7 @@ import { TrustToast } from "@/components/TrustToast";
 import FeedbackView from "@/components/FeedbackView";
 import { ProInlineCta } from "@/components/ProCta";
 
-export type View = "overview" | "issues" | "agents" | "history" | "email" | "feedback" | "pr-reviews" | "integrations" | "members";
+export type View = "overview" | "issues" | "agents" | "history" | "email" | "feedback" | "pr-reviews" | "integrations" | "members" | "terminal";
 
 const TRUST_BANNER =
   "Atlas Arena is independent. Connect providers to enable live agent runs; no scans are started automatically.";
@@ -360,6 +361,8 @@ export default function App() {
               defaultEmail={auth?.email ?? null}
               onExit={(dest) => setView(dest)}
             />
+          ) : view === "terminal" ? (
+            <TerminalWorkspaceView events={run?.transcript.events ?? []} />
           ) : view === "pr-reviews" || view === "integrations" || view === "members" ? (
             <IndependentWorkspaceView page={view} connections={mcpConnections} />
           ) : view === "history" ? (
