@@ -65,22 +65,55 @@ function ReviewPage() {
     </Panel>
   </div>;
 }
+type ConnectionEvidence = { status: string; detail: string };
+type ConnectionsResponse = { timestamp: string; integrations: Record<string, ConnectionEvidence> };
 function IntegrationPage({ connections }: { connections: McpConnectionStatus[] }) {
-  const [health, setHealth] = useState<{status?:string;execution?:string;connectors?:Record<string,string>} | null>(null);
-  const [unreachable, setUnreachable] = useState(false);
-  useEffect(()=>{ let current = true; fetch("/api/health",{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error();return r.json()}).then(x=>{if(current)setHealth(x)}).catch(()=>{if(current)setUnreachable(true)});return()=>{current=false}},[]);
-  const roster = connections.length ? connections : [];
+  const [backend, setBackend] = useState<ConnectionsResponse | null>(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let mounted = true;
+    const refresh = async () => {
+      try {
+        const res = await fetch("/api/integrations", {cache: "no-store"});
+        if (!res.ok) throw new Error("Integration status endpoint unavailable (HTTP " + res.status + ")");
+        const data = await res.json() as ConnectionsResponse;
+        if (mounted) { setBackend(data); setError(""); }
+      } catch(err) {
+        if(mounted) setError(err instanceof Error ? err.message : "Unable to reach backend");
+      }
+    };
+    void refresh();
+    const timer = setInterval(()=>{void refresh()}, 15000);
+    return ()=>{mounted=false;clearInterval(timer)};
+  }, []);
+  const integrations = Object.entries(backend?.integrations ?? {});
   return <div className="space-y-6">
-    <Heading icon={Plug} title="Integrations" text="Independent execution connections and per-run MCP tool roster." />
+    <Heading icon={Plug} title="Integrations" text="Live local bridge checks and current run MCP connections. No Strix Cloud dependency." />
     <Panel>
-      <h2 className="mb-3 text-sm font-semibold text-white">Execution backend</h2>
-      <div className="flex items-center gap-2 text-sm"><span className={`h-2 w-2 rounded-full ${health?.execution === "configured" ? "bg-emerald-400" : "bg-[#666]"}`}/><span className="text-white">{unreachable ? "Not reachable" : health?.execution === "configured" ? "Configured" : "Not configured"}</span></div>
-      <p className="mt-2 text-xs text-[#888]">A provider must be connected through the independent API. This page does not access Strix Cloud.</p>
-      {health?.connectors && <div className="mt-4 space-y-2">{Object.entries(health.connectors).map(([name, state])=><div key={name} className="flex items-center justify-between border-t border-[#222] pt-2 text-xs"><span>{name}</span><span className="text-[#888]">{state}</span></div>)}</div>}
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold text-white">Local execution environment</h2>
+        <span className="text-xs text-[#777]">Auto-refresh every 15 s</span>
+      </div>
+      {error ? <p role="alert" className="mt-3 text-sm text-red-400">{error}</p> : null}
+      {integrations.length === 0 ? <p className="mt-3 text-sm text-[#888]">No local integration telemetry available from this deployment.</p> :
+        <div className="mt-4 space-y-2">
+          {integrations.map(([name, value]) => {
+            const connected = value.status === "connected";
+            const installed = value.status === "installed" || value.status === "source_present";
+            return <div key={name} className="flex gap-3 border-t border-[#252525] py-2">
+              <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${connected ? "bg-emerald-400" : installed ? "bg-yellow-400" : "bg-[#666]"}`} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-3 text-sm"><span className="font-medium capitalize">{name}</span><span className="text-xs text-[#888]">{value.status.replaceAll("_"," ")}</span></div>
+                <p className="mt-1 text-xs text-[#666]">{value.detail}</p>
+              </div>
+            </div>;
+          })}
+        </div>}
+      <p className="mt-3 text-xs text-[#555]">An installed CLI is not an active authenticated API connection. Connection statuses are read-only; no tool or scan is launched by this page.</p>
     </Panel>
     <Panel>
-      <h2 className="mb-3 text-sm font-semibold text-white">MCP Connections ({roster.length})</h2>
-      {roster.length === 0 ? <p className="text-sm text-[#888]">No MCP connections reported for the active run.</p> : <div className="space-y-2">{roster.map(c=><div key={c.name} className="flex items-center gap-3 border-t border-[#222] pt-2"><span className={`h-2 w-2 rounded-full ${c.dead?"bg-red-400":"bg-emerald-400"}`}/><div className="flex-1 text-sm">{c.name}</div><span className="text-xs text-[#888]">{c.dead?"Offline":`${c.toolCount} tools`}</span></div>)}</div>}
+      <h2 className="mb-3 text-sm font-semibold text-white">MCP Connections ({connections.length})</h2>
+      {connections.length === 0 ? <p className="text-sm text-[#888]">No MCP connection roster has been attached to this run.</p> : <div className="space-y-2">{connections.map(c=><div key={c.name} className="flex items-center gap-3 border-t border-[#222] pt-2"><span className={`h-2 w-2 rounded-full ${c.dead?"bg-red-400":"bg-emerald-400"}`}/><div className="flex-1 text-sm">{c.name}</div><span className="text-xs text-[#888]">{c.dead?"Offline":`${c.toolCount} tools`}</span></div>)}</div>}
     </Panel>
   </div>;
 }
