@@ -218,6 +218,9 @@ class Handler(SimpleHTTPRequestHandler):
             origin = self.headers.get("Origin", "")
             allowed = {"http://127.0.0.1:" + str(self.server.server_port),
                        "http://localhost:" + str(self.server.server_port)}
+            public_origin = os.environ.get("ATLAS_HQ_PUBLIC_ORIGIN", "").rstrip("/")
+            if public_origin.startswith("https://") and public_origin.count("/") == 2:
+                allowed.add(public_origin)
             if origin not in allowed:
                 return self.reply(403, {"ok": False, "error": "same_origin_required"})
             try:
