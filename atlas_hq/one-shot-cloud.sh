@@ -7,7 +7,9 @@ cd "$ROOT"
 echo "[ATLAS] Current git revision: $(git rev-parse --short HEAD)"
 command -v codex >/dev/null || { echo "[FAIL] Codex CLI not installed on this host"; exit 1; }
 codex login status || { echo "[FAIL] Authenticate Codex on this host first"; exit 1; }
-command -v cloudflared >/dev/null || { echo "[FAIL] cloudflared missing; install from official release before continuing"; exit 1; }
+CLOUDFLARED="$(command -v cloudflared || true)"
+if [[ -z "$CLOUDFLARED" && -x /tmp/cloudflared ]]; then CLOUDFLARED=/tmp/cloudflared; fi
+[[ -n "$CLOUDFLARED" ]] || { echo "[FAIL] cloudflared missing; install from official release before continuing"; exit 1; }
 TOKEN="$HOME/.atlas-hq/ingest-token"
 test -s "$TOKEN" || { echo "[FAIL] Missing Atlas token. Run bash atlas_hq/start.sh once to initialize"; exit 1; }
 if ss -ltn | grep -q '127.0.0.1:8917'; then
@@ -18,7 +20,7 @@ if ss -ltn | grep -q '127.0.0.1:8917'; then
   for i in {1..20}; do ss -ltn | grep -q '127.0.0.1:8917' || break; sleep 0.2; done
 fi
 if [[ -f "$HOME/atlas-tunnel.pid" ]]; then kill "$(cat "$HOME/atlas-tunnel.pid")" 2>/dev/null || true; fi
-nohup cloudflared tunnel --url http://127.0.0.1:8917 >"$HOME/atlas-tunnel.log" 2>&1 </dev/null &
+nohup "$CLOUDFLARED" tunnel --url http://127.0.0.1:8917 >"$HOME/atlas-tunnel.log" 2>&1 </dev/null &
 echo "$!" >"$HOME/atlas-tunnel.pid"
 PUBLIC=""
 for i in {1..30}; do
