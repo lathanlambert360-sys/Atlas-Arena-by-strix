@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "project": "Atlas Arena",
+  "provider": "self_hosted_strix_byok",
+  "primary": {
+    "role": "orchestrator",
+    "model": "huihui_ai/qwen3.5-abliterated:35b",
+    "engine": "ollama",
+    "endpoint_env": "ATLAS_QWEN_BASE_URL",
+    "state": "awaiting_gpu_endpoint",
+    "tool_calling_required": true
+  },
+  "agents": {
+    "role": "agentic_execution",
+    "model": "Ridaz",
+    "engine": "9router",
+    "endpoint_env": "ATLAS_RIDAZ_BASE_URL",
+    "default_endpoint": "http://127.0.0.1:20128/v1",
+    "state": "existing_setup_unmodified"
+  },
+  "selection_policy": {
+    "default_role": "orchestrator",
+    "delegate_tools_to": "agentic_execution",
+    "allow_ridaz_to_replace_primary": false,
+    "allow_primary_fallback": false
+  },
+  "runtime": {
+    "active": false,
+    "reason": "Uncensored Qwen 35B GPU inference endpoint not connected; config declares intended routing, not a working model.",
+    "requires": [
+      "ATLAS_QWEN_BASE_URL reachable from Strix runtime",
+      "model reported by Ollama /api/tags",
+      "verified tool-calling behavior",
+      "BYOK Strix self-hosted runtime"
+    ]
+  }
+}
