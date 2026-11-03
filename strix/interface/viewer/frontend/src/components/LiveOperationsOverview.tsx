@@ -15,9 +15,9 @@ export default function LiveOperationsOverview({compact=false}:{compact?:boolean
       try {
         const results=await Promise.all([
           fetch("/api/chat",{cache:"no-store"}).then(r=>r.json()),
-          ...[1,2,3].map(slot=>fetch("/api/terminal/output?slot="+slot+"&offset=0",{cache:"no-store"}).then(r=>r.json()))
+          fetch("/api/terminal/status",{cache:"no-store"}).then(r=>r.json())
         ]);
-        if(alive){setStatus(results[0]);setShells(results.slice(1))}
+        if(alive){setStatus(results[0]);setShells(results[1].sessions??[])}
       }catch{/* local server may be starting */}
     };
     void refresh();
