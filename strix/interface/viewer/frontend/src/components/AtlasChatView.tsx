@@ -2,7 +2,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Bot, Send, ShieldCheck, RefreshCcw, LogIn } from "lucide-react";
 type ChatMessage = { id: string; role: "user" | "assistant"; content: string; created: string };
 type ChatState = {
-  available: boolean; authenticated: boolean; engine: string; sandbox: string;
+  available: boolean; authenticated: boolean; engine: string; provider: "orca" | "codex"; sandbox: string;
   session: { status: string; error: string | null; updated: string };
   messages: ChatMessage[];
   device_auth: { running: boolean; output: string };
@@ -67,8 +67,8 @@ export default function AtlasChatView() {
     </div>
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#282828] bg-[#0f0f0f] p-3 text-xs text-[#aaa]">
       <span className={`h-2 w-2 rounded-full ${data?.authenticated?"bg-emerald-400":"bg-yellow-500"}`}/>
-      <span>{data?.authenticated?"Codex signed in":data?.available?"Codex sign-in required":"Codex CLI unavailable"}</span>
-      <span className="text-[#555]">·</span><span>Local Kali</span>
+      <span>{data?.authenticated?(data.provider==="orca"?"OrcaCyber connected":"Codex signed in"):data?.available?"Codex sign-in required":"AI provider unavailable"}</span>
+      <span className="text-[#555]">·</span><span>{data?.engine??"Local Kali"}</span>
       <span className="text-[#555]">·</span><span>Read-only session</span>
       {active&&<span className="ml-auto animate-pulse text-emerald-300">Atlas is responding…</span>}
     </div>
@@ -85,30 +85,30 @@ export default function AtlasChatView() {
     </section>}
     <div className="min-h-[280px] max-h-[55vh] space-y-4 overflow-y-auto rounded-xl border border-[#282828] bg-[rgba(255,255,255,0.02)] p-4 sm:p-6">
       {(!data||data.messages.length===0)&&<div className="py-14 text-center"><Bot className="mx-auto mb-3 h-8 w-8 text-[#666]"/>
-        <p className="text-white">Atlas HQ chat is ready for a local Codex connection.</p>
+        <p className="text-white">Atlas HQ chat is ready for OrcaCyber or Codex.</p>
         <p className="mt-2 text-sm text-[#777]">Once signed in, messages and replies appear here and persist on Kali.</p></div>}
       {data?.messages.map(msg=><div key={msg.id} className={`flex ${msg.role==="user"?"justify-end":"justify-start"}`}>
         <div className={`max-w-[92%] rounded-xl border px-4 py-3 text-sm leading-6 whitespace-pre-wrap break-words sm:max-w-[85%] ${msg.role==="user"?"border-[#555] bg-[#242424] text-white":"border-[#252525] bg-[#0b0b0b] text-[#ddd]"}`}>
-          <p className="mb-2 text-xs font-semibold text-[#777]">{msg.role==="user"?"You":"Atlas (Codex)"}</p>{msg.content}
+          <p className="mb-2 text-xs font-semibold text-[#777]">{msg.role==="user"?"You":"Atlas ({data?.provider==="orca"?"OrcaCyber":"Codex"})"}</p>{msg.content}
         </div>
       </div>)}
       {active&&<div className="text-sm text-[#888]">Reading your request…</div>}
       <div ref={bottom}/>
     </div>
-    {data?.session.error&&<div className="rounded-lg border border-red-900 p-3 text-sm text-red-400">Codex error: {data.session.error}</div>}
+    {data?.session.error&&<div className="rounded-lg border border-red-900 p-3 text-sm text-red-400">Atlas error: {data.session.error}</div>}
     <form className="flex gap-3 rounded-xl border border-[#333] bg-[#111] p-3" onSubmit={e=>void send(e)}>
       <textarea aria-label="Message Atlas" value={draft} rows={2}
         onChange={e=>setDraft(e.target.value)}
         onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();void send(e as unknown as FormEvent)}}}
         disabled={!data?.authenticated||active}
-        placeholder={data?.authenticated?"Ask Atlas to investigate a repository, analyze a result or organize a run…":"Connect Codex to enable chat"}
+        placeholder={data?.authenticated?"Ask Atlas to investigate a repository, analyze a result or organize a run…":"Connect an AI model to enable chat"}
         className="min-h-[65px] max-h-40 flex-1 resize-y bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-[#666] disabled:opacity-60"/>
       <button type="submit" disabled={!data?.authenticated||!draft.trim()||busy||active}
         className="self-end rounded-lg bg-white p-3 text-black disabled:opacity-35" title="Send message">
         <Send className="h-4 w-4"/></button>
     </form>
     <p className="flex items-start gap-2 text-xs leading-5 text-[#777]">
-      <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0"/>This is a new local Codex AI session, not this existing ChatGPT conversation. The Strix Core MCP connected to ChatGPT does not automatically pass into Codex. Codex starts read-only and does not run scans by itself.
+      <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0"/>Atlas Chat uses OrcaCyber Flash when the local backend has ORCAROUTER_API_KEY configured; otherwise it can use Codex. Conversation history stays in local SQLite. Tool execution is managed separately.
     </p>
   </div>;
 }
