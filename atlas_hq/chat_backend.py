@@ -25,6 +25,7 @@ MAX_MESSAGES = 500
 MAX_CONTENT = 12000
 ORCA_URL = "https://api.orcarouter.ai/v1/chat/completions"
 ORCA_MODEL = "orca/orcacyber-flash-1.0-free"
+ORCA_CHECK = {"verified": False, "checked": False, "error": None}
 
 def orca_ready():
     return bool(os.environ.get("ORCAROUTER_API_KEY", "").strip())
@@ -117,6 +118,8 @@ def state(db):
             "messages":list(reversed(msgs)),"device_auth":device,
             "engine":("OrcaCyber Flash (OrcaRouter)" if orca_ready() else "Local Codex CLI"),
             "provider":("orca" if orca_ready() else "codex"),
+            "model":ORCA_MODEL if orca_ready() else None,
+            "model_check":dict(ORCA_CHECK),
             "sandbox":"read-only"}
 
 def send(db, workspace, message):
@@ -239,6 +242,8 @@ def _orca_worker(db):
         with urlopen(req,timeout=120) as reply:
             response = json.load(reply)
         answer = response["choices"][0]["message"]["content"]
+        with LOCK:
+            ORCA_CHECK.update(verified=True,checked=True,error=None)
         if not isinstance(answer,str) or not answer.strip():
             raise ValueError("OrcaRouter returned an empty text response")
         with connect(db) as con:
@@ -256,3 +261,29 @@ def _orca_worker(db):
         with connect(db) as con:
             con.execute("UPDATE atlas_chat_session SET status='failed',error=?,updated=? WHERE id=1",
                         (error,utcnow()))
+
+def test_orca():
+    """Explicit on-demand API handshake. Does not alter saved chat history."""
+    if not orca_ready():
+        return 409, {"ok":False,"error":"OrcaRouter API key is not configured"}
+    body = json.dumps({"model":ORCA_MODEL,"stream":False,"max_tokens":30,
+        "messages":[{"role":"user","content":"Reply with OK."}]}).encode("utf-8")
+    request = Request(ORCA_URL, method="POST", data=body, headers={
+        "Authorization":"Bearer "+os.environ["ORCAROUTER_API_KEY"].strip(),
+        "Content-Type":"application/json","Accept":"application/json"})
+    try:
+        with urlopen(request,timeout=35) as response:
+            result=json.load(response)
+        content=result["choices"][0]["message"]["content"]
+        if not isinstance(content,str) or not content.strip():
+            raise ValueError("Empty model response")
+        with LOCK:
+            ORCA_CHECK.update(verified=True,checked=True,error=None)
+        return 200, {"ok":True,"verified":True,"model":ORCA_MODEL,"reply":content[:120]}
+    except HTTPError as exc:
+        error = "OrcaRouter HTTP "+str(exc.code)
+    except (URLError, TimeoutError, KeyError, ValueError, OSError, TypeError, IndexError) as exc:
+        error = "OrcaRouter request failed ("+type(exc).__name__+")"
+    with LOCK:
+        ORCA_CHECK.update(verified=False,checked=True,error=error)
+    return 502, {"ok":False,"verified":False,"error":error}
