@@ -343,8 +343,8 @@ def main():
         ap.error("Ingest token is invalid or too short")
     with connect(args.db):
         pass
-    with chat_backend.connect(args.db):
-        pass
+    with chat_backend.connect(args.db) as chat_db:
+        chat_db.execute("UPDATE atlas_chat_session SET status='idle',error='Previous process stopped' WHERE status='running'")
     handler = partial(Handler, directory=str(args.site.resolve()))
     server = ThreadingHTTPServer((args.host, args.port), handler)
     server.db = args.db
