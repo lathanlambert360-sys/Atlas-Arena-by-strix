@@ -9,6 +9,8 @@ import {
   ChevronsUpDown,
   Terminal,
   Globe2,
+  Activity,
+  BookOpen,
 } from "lucide-react";
 import { LuGitPullRequestArrow } from "react-icons/lu";
 import { VscExtensions } from "react-icons/vsc";
@@ -250,6 +252,18 @@ export default function Sidebar({
               count={agentCount > 0 ? agentCount : undefined}
               active={view === "agents"}
               onClick={() => onSelectView("agents")}
+            />
+            <NavItem
+              icon={<Activity className="h-4 w-4" />}
+              label="Stats Tracker"
+              active={view === "stats"}
+              onClick={() => onSelectView("stats")}
+            />
+            <NavItem
+              icon={<BookOpen className="h-4 w-4" />}
+              label="Strix Knowledge"
+              active={view === "knowledge"}
+              onClick={() => onSelectView("knowledge")}
             />
             <NavItem
               icon={<Terminal className="h-4 w-4" />}
