@@ -18,7 +18,7 @@ CACHE={"time":0.0,"result":None}
 def parse(body,content_type):
     if "text/event-stream" in content_type:
         events=[]
-        for block in body.split("\n\n"):
+        for block in body.replace("\r\n","\n").split("\n\n"):
             for line in block.splitlines():
                 if line.startswith("data:"):
                     try:events.append(json.loads(line[5:].strip()))
