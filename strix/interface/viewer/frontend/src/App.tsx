@@ -43,6 +43,7 @@ import IndependentWorkspaceView from "@/components/IndependentWorkspaceView";
 import LocalReportExport from "@/components/LocalReportExport";
 import TerminalWorkspaceView from "@/components/TerminalWorkspaceView";
 import LiveOperationsOverview from "@/components/LiveOperationsOverview";
+import LiveAgentGraph from "@/components/LiveAgentGraph";
 import AtlasChatView from "@/components/AtlasChatView";
 import ThreatGlobeView from "@/components/ThreatGlobeView";
 import PastRunsView from "@/components/PastRunsView";
@@ -804,10 +805,11 @@ function AgentsTab({ run, canSteer }: { run: LoadedRun; canSteer: boolean }) {
   return (
     <div className="space-y-5">
       <LiveOperationsOverview compact />
+      <LiveAgentGraph />
       <div className="rounded-xl border border-[#222] bg-[rgba(255,255,255,0.02)] p-5">
         <div className="flex items-center gap-2">
           <Bot className="w-4 h-4 text-[#888]" aria-hidden="true" />
-          <h2 className="text-sm font-semibold text-white">Agent graph</h2>
+          <h2 className="text-sm font-semibold text-white">Archived run agent graph</h2>
           <span className="text-xs text-[#666]">
             {agents.length} agent{agents.length === 1 ? "" : "s"}
           </span>
