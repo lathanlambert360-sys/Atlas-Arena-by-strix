@@ -52,6 +52,9 @@ export default function ThreatGlobeView() {
       </div>
       <div className="flex items-center gap-3 text-xs">
         <button className="rounded-lg border border-[#36404b] px-3 py-2 text-[#d0e4ef] hover:bg-[#17202a]" onClick={()=>setReload(r=>r+1)}>Reload globe</button>
+        <a className="inline-flex items-center gap-1 rounded-lg border border-emerald-800 bg-emerald-950/20 px-3 py-2 text-emerald-300 hover:bg-emerald-950/40"
+          href="https://cybermap.kaspersky.com/en" target="_blank" rel="noopener noreferrer"
+          title="Open Kaspersky's interactive globe and drag to South Africa">🇿🇦 South Africa · rotate globe ↗</a>
         <a className="inline-flex items-center gap-1 text-cyan-400 hover:underline"
           href="https://cybermap.kaspersky.com/en" target="_blank" rel="noopener noreferrer">Full interactive globe <ExternalLink className="h-3 w-3"/></a>
       </div>
