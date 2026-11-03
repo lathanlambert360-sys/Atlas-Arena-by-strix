@@ -89,7 +89,7 @@ export default function AtlasChatView() {
         <p className="mt-2 text-sm text-[#777]">Once signed in, messages and replies appear here and persist on Kali.</p></div>}
       {data?.messages.map(msg=><div key={msg.id} className={`flex ${msg.role==="user"?"justify-end":"justify-start"}`}>
         <div className={`max-w-[92%] rounded-xl border px-4 py-3 text-sm leading-6 whitespace-pre-wrap break-words sm:max-w-[85%] ${msg.role==="user"?"border-[#555] bg-[#242424] text-white":"border-[#252525] bg-[#0b0b0b] text-[#ddd]"}`}>
-          <p className="mb-2 text-xs font-semibold text-[#777]">{msg.role==="user"?"You":"Atlas ({data?.provider==="orca"?"OrcaCyber":"Codex"})"}</p>{msg.content}
+          <p className="mb-2 text-xs font-semibold text-[#777]">{msg.role==="user"?"You":(data?.provider==="orca"?"Atlas (OrcaCyber)":"Atlas (Codex)")}</p>{msg.content}
         </div>
       </div>)}
       {active&&<div className="text-sm text-[#888]">Reading your request…</div>}
