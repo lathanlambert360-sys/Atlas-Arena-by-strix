@@ -6,12 +6,14 @@ from operator-approved Atlas dashboard actions.
 import json
 import os
 import threading
+import time
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
 ENDPOINT = os.environ.get("ATLAS_HEX_MCP_URL","http://127.0.0.1:8000/mcp")
 LOCK=threading.RLock()
 VERSION="2025-03-26"
+CACHE={"time":0.0,"result":None}
 
 def parse(body,content_type):
     if "text/event-stream" in content_type:
@@ -63,8 +65,12 @@ def call_tool(name,arguments):
     return output.get("result",{})
 
 def inspect():
+    if CACHE["result"] is not None and time.monotonic()-CACHE["time"]<45:
+        return CACHE["result"]
     try:
         names=[t.get("name","") for t in list_tools()]
-        return {"connected":True,"count":len(names),"tools":names[:175]}
+        result={"connected":True,"count":len(names),"tools":names[:175]}
     except (HTTPError,URLError,RuntimeError,ValueError,OSError,TimeoutError) as exc:
-        return {"connected":False,"error":type(exc).__name__,"detail":str(exc)[:180]}
+        result={"connected":False,"error":type(exc).__name__,"detail":str(exc)[:180]}
+    CACHE.update(time=time.monotonic(),result=result)
+    return result
