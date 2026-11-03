@@ -43,6 +43,8 @@ import IndependentWorkspaceView from "@/components/IndependentWorkspaceView";
 import LocalReportExport from "@/components/LocalReportExport";
 import TerminalWorkspaceView from "@/components/TerminalWorkspaceView";
 import LiveOperationsOverview from "@/components/LiveOperationsOverview";
+import LiveStatsView from "@/components/LiveStatsView";
+import KnowledgeView from "@/components/KnowledgeView";
 import LiveAgentGraph from "@/components/LiveAgentGraph";
 import AtlasChatView from "@/components/AtlasChatView";
 import ThreatGlobeView from "@/components/ThreatGlobeView";
@@ -53,7 +55,7 @@ import { TrustToast } from "@/components/TrustToast";
 import FeedbackView from "@/components/FeedbackView";
 import { ProInlineCta } from "@/components/ProCta";
 
-export type View = "threats" | "chat" | "overview" | "issues" | "agents" | "history" | "email" | "feedback" | "pr-reviews" | "integrations" | "members" | "terminal";
+export type View = "knowledge" | "stats" | "threats" | "chat" | "overview" | "issues" | "agents" | "history" | "email" | "feedback" | "pr-reviews" | "integrations" | "members" | "terminal";
 
 const TRUST_BANNER =
   "Atlas Arena is independent. Connect providers to enable live agent runs; no scans are started automatically.";
@@ -212,7 +214,7 @@ export default function App() {
 
   useEffect(() => {
     if (initialViewAppliedRef.current || !run) return;
-    if (view === "chat" || view === "threats") { initialViewAppliedRef.current = true; return; }
+    if (view === "chat" || view === "threats" || view === "knowledge" || view === "stats") { initialViewAppliedRef.current = true; return; }
     if (run.finished) {
       initialViewAppliedRef.current = true;
       setView("overview");
@@ -346,7 +348,11 @@ export default function App() {
             key={`${activeRun ?? "launched"}:${view}:${selectedId ?? ""}`}
             className="animate-page-in space-y-6"
           >
-          {view === "threats" ? (
+          {view === "knowledge" ? (
+             <KnowledgeView />
+           ) : view === "stats" ? (
+             <LiveStatsView />
+           ) : view === "threats" ? (
             <ThreatGlobeView />
           ) : view === "chat" ? (
             <AtlasChatView />
@@ -707,6 +713,7 @@ function OverviewTab({
   return (
     <div className="space-y-6">
       <LiveOperationsOverview />
+      <LiveStatsView compact />
       <div className="animate-card-in">
         <RunDetails raw={raw} durationSeconds={summary.durationSeconds} />
       </div>
