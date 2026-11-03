@@ -205,7 +205,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         endpoint = urlsplit(self.path).path
-        if endpoint in ("/api/chat", "/api/chat/auth/start"):
+        if endpoint in ("/api/chat", "/api/chat/auth/start", "/api/chat/model/test"):
             # Chat actions require the local browser session and a same-origin POST.
             cookies = SimpleCookie()
             try:
@@ -232,6 +232,9 @@ class Handler(SimpleHTTPRequestHandler):
                     return self.reply(400, {"ok": False, "error": "invalid_body"})
             except (ValueError, json.JSONDecodeError):
                 return self.reply(400, {"ok": False, "error": "invalid_body"})
+            if endpoint == "/api/chat/model/test":
+                code, result = chat_backend.test_orca()
+                return self.reply(code, result)
             if endpoint == "/api/chat/auth/start":
                 ok, msg = chat_backend.device_auth_start()
                 return self.reply(200 if ok else 503, {"ok": ok, "message": msg})
