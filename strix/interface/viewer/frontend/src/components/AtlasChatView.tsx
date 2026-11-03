@@ -3,6 +3,7 @@ import { Bot, Send, ShieldCheck, RefreshCcw, LogIn } from "lucide-react";
 type ChatMessage = { id: string; role: "user" | "assistant"; content: string; created: string };
 type ChatState = {
   available: boolean; authenticated: boolean; engine: string; provider: "orca" | "codex"; sandbox: string;
+  model: string | null; model_check: { checked: boolean; verified: boolean; error: string | null };
   session: { status: string; error: string | null; updated: string };
   messages: ChatMessage[];
   device_auth: { running: boolean; output: string };
@@ -48,6 +49,12 @@ export default function AtlasChatView() {
     catch(e){setError(e instanceof Error?e.message:"Unable to send")}
     finally{setBusy(false)}
   };
+  const testModel=async()=>{
+    setBusy(true);setError("");
+    try {await post("/api/chat/model/test",{});await refresh()}
+    catch(e){setError(e instanceof Error?e.message:"Model test failed");await refresh()}
+    finally{setBusy(false)}
+  };
   const connect=async()=>{
     setBusy(true);setError("");
     try {await post("/api/chat/auth/start",{});await refresh()}
@@ -67,11 +74,13 @@ export default function AtlasChatView() {
     </div>
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#282828] bg-[#0f0f0f] p-3 text-xs text-[#aaa]">
       <span className={`h-2 w-2 rounded-full ${data?.authenticated?"bg-emerald-400":"bg-yellow-500"}`}/>
-      <span>{data?.authenticated?(data.provider==="orca"?"OrcaCyber connected":"Codex signed in"):data?.available?"Codex sign-in required":"AI provider unavailable"}</span>
+      <span>{data?.authenticated?(data.provider==="orca"?(data.model_check?.verified?"OrcaCyber verified":"OrcaCyber configured"):"Codex signed in"):data?.available?"Codex sign-in required":"AI provider unavailable"}</span>
       <span className="text-[#555]">·</span><span>{data?.engine??"Local Kali"}</span>
       <span className="text-[#555]">·</span><span>Read-only session</span>
+      {data?.provider==="orca"&&<button disabled={busy||active} onClick={()=>void testModel()} className="ml-auto rounded-lg border border-cyan-700 px-3 py-1.5 text-cyan-300 hover:bg-cyan-950/30 disabled:opacity-40">Test model</button>}
       {active&&<span className="ml-auto animate-pulse text-emerald-300">Atlas is responding…</span>}
     </div>
+    {data?.provider==="orca"&&data.model_check?.verified&&<div className="text-xs text-emerald-400">Verified live API response from {data.model}</div>}
     {error&&<div role="alert" className="rounded-lg border border-red-800 bg-red-950/25 p-3 text-sm text-red-300">{error}</div>}
     {!data?.authenticated&&<section className="rounded-xl border border-[#333] bg-[#151515] p-5">
       <h2 className="mb-2 font-semibold text-white">Connect your existing Codex login</h2>
