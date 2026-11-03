@@ -3,6 +3,28 @@
 set -euo pipefail
 umask 077
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Persist the locally entered OrcaRouter key across Atlas HQ restarts.
+KEY_FILE="$HOME/.atlas-hq/orcarouter-key"
+mkdir -p "$HOME/.atlas-hq"
+chmod 700 "$HOME/.atlas-hq"
+if [[ -z "${ORCAROUTER_API_KEY:-}" && -s "$KEY_FILE" ]]; then
+  ORCAROUTER_API_KEY="$(cat "$KEY_FILE")"
+  export ORCAROUTER_API_KEY
+fi
+if [[ -z "${ORCAROUTER_API_KEY:-}" && -t 0 ]]; then
+  read -rsp "Paste OrcaRouter API key: " ORCAROUTER_API_KEY
+  echo
+  if [[ -n "$ORCAROUTER_API_KEY" ]]; then
+    (umask 077; printf '%s' "$ORCAROUTER_API_KEY" > "$KEY_FILE")
+    chmod 600 "$KEY_FILE"
+    export ORCAROUTER_API_KEY
+  fi
+fi
+if [[ -n "${ORCAROUTER_API_KEY:-}" ]]; then
+  echo "[Atlas HQ] OrcaCyber configured: orca/orcacyber-flash-1.0-free"
+else
+  echo "[Atlas HQ] OrcaRouter key not configured; Codex fallback remains available"
+fi
 FRONT="$ROOT/strix/interface/viewer/frontend"
 SITE="$ROOT/strix/interface/viewer/static"
 # Rebuild when tracked frontend source revision changes (file timestamps alone are unreliable after git clone).
