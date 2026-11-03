@@ -170,6 +170,8 @@ class Handler(SimpleHTTPRequestHandler):
             return super().do_GET()
         endpoint = url.path[5:]
         args = parse_qs(url.query)
+        if endpoint == "terminal/status":
+            return self.reply(200,{"sessions":live_terminal.status()})
         if endpoint == "terminal/output":
             try:
                 slot=int(args.get("slot",["1"])[0])
