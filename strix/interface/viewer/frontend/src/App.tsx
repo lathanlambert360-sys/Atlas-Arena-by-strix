@@ -43,6 +43,7 @@ import IndependentWorkspaceView from "@/components/IndependentWorkspaceView";
 import LocalReportExport from "@/components/LocalReportExport";
 import TerminalWorkspaceView from "@/components/TerminalWorkspaceView";
 import AtlasChatView from "@/components/AtlasChatView";
+import ThreatGlobeView from "@/components/ThreatGlobeView";
 import PastRunsView from "@/components/PastRunsView";
 import EmailReportView from "@/components/EmailReportView";
 import { RunDetails } from "@/components/RunDetails";
@@ -50,7 +51,7 @@ import { TrustToast } from "@/components/TrustToast";
 import FeedbackView from "@/components/FeedbackView";
 import { ProInlineCta } from "@/components/ProCta";
 
-export type View = "chat" | "overview" | "issues" | "agents" | "history" | "email" | "feedback" | "pr-reviews" | "integrations" | "members" | "terminal";
+export type View = "threats" | "chat" | "overview" | "issues" | "agents" | "history" | "email" | "feedback" | "pr-reviews" | "integrations" | "members" | "terminal";
 
 const TRUST_BANNER =
   "Atlas Arena is independent. Connect providers to enable live agent runs; no scans are started automatically.";
@@ -343,7 +344,9 @@ export default function App() {
             key={`${activeRun ?? "launched"}:${view}:${selectedId ?? ""}`}
             className="animate-page-in space-y-6"
           >
-          {view === "chat" ? (
+          {view === "threats" ? (
+            <ThreatGlobeView />
+          ) : view === "chat" ? (
             <AtlasChatView />
           ) : view === "email" ? (
             <div className="space-y-6">
