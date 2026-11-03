@@ -15,6 +15,7 @@ import shutil
 import sqlite3
 import chat_backend
 import atlas_actions
+import live_terminal
 from urllib.request import urlopen
 from urllib.error import URLError, HTTPError
 from datetime import datetime, timezone
@@ -169,6 +170,13 @@ class Handler(SimpleHTTPRequestHandler):
             return super().do_GET()
         endpoint = url.path[5:]
         args = parse_qs(url.query)
+        if endpoint == "terminal/output":
+            try:
+                slot=int(args.get("slot",["1"])[0])
+                offset=int(args.get("offset",["0"])[0])
+                return self.reply(200, live_terminal.output(slot,offset))
+            except (ValueError,TypeError) as exc:
+                return self.reply(400,{"ok":False,"error":str(exc)[:160]})
         name = args.get("run", [None])[0]
         with connect(self.server.db) as db:
             row = choose_run(db, name)
@@ -206,7 +214,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         endpoint = urlsplit(self.path).path
-        if endpoint in ("/api/chat", "/api/chat/auth/start", "/api/chat/model/test", "/api/chat/tool/decide"):
+        if endpoint in ("/api/chat", "/api/chat/auth/start", "/api/chat/model/test", "/api/chat/tool/decide", "/api/terminal/start", "/api/terminal/input", "/api/terminal/resize", "/api/terminal/stop"):
             # Chat actions require the local browser session and a same-origin POST.
             cookies = SimpleCookie()
             try:
@@ -233,6 +241,20 @@ class Handler(SimpleHTTPRequestHandler):
                     return self.reply(400, {"ok": False, "error": "invalid_body"})
             except (ValueError, json.JSONDecodeError):
                 return self.reply(400, {"ok": False, "error": "invalid_body"})
+            if endpoint.startswith("/api/terminal/"):
+                try:
+                    slot=payload.get("slot")
+                    if endpoint == "/api/terminal/start":
+                        result=live_terminal.start(slot)
+                    elif endpoint == "/api/terminal/input":
+                        result=live_terminal.write(slot,payload.get("data"))
+                    elif endpoint == "/api/terminal/resize":
+                        result=live_terminal.resize(slot,payload.get("cols"),payload.get("rows"))
+                    else:
+                        result=live_terminal.stop(slot)
+                    return self.reply(200,{"ok":True,**result})
+                except (ValueError,TypeError,OSError) as exc:
+                    return self.reply(400,{"ok":False,"error":str(exc)[:180]})
             if endpoint == "/api/chat/tool/decide":
                 identifier=payload.get("id")
                 approval=payload.get("approve")
