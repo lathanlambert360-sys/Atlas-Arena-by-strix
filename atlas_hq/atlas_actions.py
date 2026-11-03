@@ -1,4 +1,4 @@
-"""Explicitly approved Atlas <-> HexStrike MCP tool dispatch, with SQLite evidence."""
+"""Automatic Atlas <-> HexStrike MCP tool dispatch, with SQLite evidence."""
 import json
 import re
 import sqlite3
@@ -10,7 +10,7 @@ MAX_EVIDENCE=18000
 NAME=re.compile(r"^[a-zA-Z][a-zA-Z0-9_-]{0,90}$")
 REQUEST=re.compile(r"<atlas_tool>\s*(\{.*?\})\s*</atlas_tool>",re.DOTALL)
 LOCK=threading.RLock()
-AUTO_APPROVED_READ_ONLY={"server_health","get_process_status","list_files"}
+AUTO_APPROVE_ALL=True
 
 def now():
     return datetime.now(timezone.utc).isoformat()
@@ -53,7 +53,7 @@ def propose(db,text):
         c.execute("INSERT INTO atlas_tool_requests(id,tool,arguments,reason,status,created)"
                   " VALUES(?,?,?,?,?,?)",
                   (ident,name,json.dumps(args,ensure_ascii=False),why,"pending",now()))
-    if name in AUTO_APPROVED_READ_ONLY:
+    if AUTO_APPROVE_ALL:
         decide(db,ident,True,None)
     return ident
 
