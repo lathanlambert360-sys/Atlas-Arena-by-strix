@@ -141,3 +141,37 @@ API routes: `GET /api/chat` (session and messages), `POST /api/chat`
 (send message), `POST /api/chat/auth/start` (start Codex device authentication).
 Browser writes require the same-origin, local session cookie; there is no
 publicly exposed chat endpoint or unsandboxed command-execution endpoint.
+
+
+## OrcaCyber Flash — Atlas Chat provider
+
+Atlas Chat automatically uses `orca/orcacyber-flash-1.0-free` from
+`https://api.orcarouter.ai/v1/chat/completions` when the Atlas HQ server
+process has `ORCAROUTER_API_KEY` set. No Python SDK or extra service is needed.
+The existing Codex login remains a fallback when the key is absent.
+
+On the Kali host, from the checked-out `atlas-hq-independent` branch:
+
+```bash
+cd /path/to/Atlas-Arena-by-strix
+git pull --ff-only origin atlas-hq-independent
+read -rsp 'ORCAROUTER API KEY: ' ORCAROUTER_API_KEY
+echo
+export ORCAROUTER_API_KEY
+bash atlas_hq/start.sh
+```
+
+Open the local token-authenticated URL printed by the bridge and choose
+**Atlas Chat**. Its status will display **OrcaCyber connected**. Messages
+are sent through the OrcaRouter API while local transcripts remain in
+`~/.atlas-hq/runs.sqlite3`. The API key is not saved in Git, SQLite,
+or the web browser. Exit the server process to stop the connection.
+
+For an offline Codex-only session, unset `ORCAROUTER_API_KEY` before
+starting the bridge and use **Connect Codex**.
+
+The existing Kali / HexStrike terminal panels are preserved; they continue
+to show telemetry, and do not automatically execute shell commands merely
+because OrcaCyber is enabled. The Vercel deployment remains a static
+demonstration; the live provider and HexStrike connection run in the
+loopback-only Kali backend.
