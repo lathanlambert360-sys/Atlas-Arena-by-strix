@@ -7,6 +7,7 @@ No API keys or shell-command parameters are accepted through the HTTP API.
 """
 from __future__ import annotations
 import json
+import atlas_tools
 import os
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
@@ -120,12 +121,15 @@ def state(db):
             "provider":("orca" if orca_ready() else "codex"),
             "model":ORCA_MODEL if orca_ready() else None,
             "model_check":dict(ORCA_CHECK),
+            "reference_archives":atlas_tools.references(),
             "sandbox":"read-only"}
 
 def send(db, workspace, message):
     if not isinstance(message,str) or not (1 <= len(message.strip()) <= 5000):
         return 400, {"ok":False,"error":"Message must be 1-5000 characters"}
     use_orca = orca_ready()
+    if message.lstrip().startswith("/atlas "):
+        return _local_command(db,message.strip())
     if not use_orca and not auth_status(force=True):
         return 409, {"ok":False,"error":"OrcaRouter key missing and Codex is not signed in."}
     with LOCK:
@@ -216,19 +220,69 @@ def _worker(db, workspace, session_id, user_prompt):
         if proc is not None and proc.poll() is None:proc.kill()
 
 
+def _local_command(db,command):
+    """Actual local observations / original ZIP documents."""
+    parts=command.split(" ",3)
+    mode=parts[1].lower() if len(parts)>1 else ""
+    try:
+        if mode=="status":
+            answer=json.dumps(atlas_tools.status(),indent=2,ensure_ascii=False)[:MAX_CONTENT]
+        elif mode=="refs":
+            if len(parts)>2 and parts[2] in atlas_tools.ARCHIVES:
+                answer="\n".join(atlas_tools.inventory(parts[2]))[:MAX_CONTENT]
+            else:
+                answer=json.dumps(atlas_tools.references(),indent=2)[:MAX_CONTENT]
+        elif mode=="read":
+            if len(parts)<4:raise ValueError("Usage: /atlas read <archive-id> <member-path>")
+            answer=atlas_tools.read_reference(parts[2],parts[3])
+        else:
+            answer="Commands: /atlas status | /atlas refs | /atlas refs <archive-id> | /atlas read <archive-id> <member-path>"
+    except (ValueError,KeyError,FileNotFoundError,OSError) as exc:
+        answer="Atlas resource error: "+str(exc)[:250]
+    with LOCK:
+        with connect(db) as con:
+            for role,content in (("user",command),("assistant",answer)):
+                con.execute("INSERT INTO atlas_chat_message(id,role,content,created) VALUES(?,?,?,?)",
+                           (("usr-" if role=="user" else "ast-")+uuid.uuid4().hex,role,content,utcnow()))
+    return 202,{"ok":True,"accepted":True}
+
+def _references_for_model():
+    """Actual document excerpts; original archive bytes stay untouched."""
+    summaries=[]
+    for record in atlas_tools.references():
+        name=record["id"]
+        if not record.get("available"):
+            summaries.append(name+": not found on Kali")
+            continue
+        files=atlas_tools.inventory(name)
+        candidates=[p for p in files if p.lower().endswith(("readme.md","skill.md"))]
+        selection=candidates[:1] or files[:1]
+        extracts=[]
+        for member in selection:
+            try: extracts.append("FILE "+member+"\n"+atlas_tools.read_reference(name,member,2100))
+            except (ValueError,KeyError,OSError):pass
+        summaries.append(name+": "+str(record.get("documents",0))+" files; "+", ".join(files[:8])+"\n"+"\n".join(extracts))
+    return "\n\n".join(summaries)[:12000]
+
 def _orca_worker(db):
     """Remote reasoning through OrcaRouter; no shell execution or scans."""
     with connect(db) as con:
         history = [dict(r) for r in con.execute(
             "SELECT role,content FROM atlas_chat_message ORDER BY rowid DESC LIMIT 24"
         ).fetchall()]
+    evidence = atlas_tools.status()
+    references = _references_for_model()
     messages = [{"role":"system","content":(
         "You are Atlas HQ's cybersecurity research assistant. "
         "Complement your own cyber harness with the BlackHAT Roadmap, "
         "Hacker Scripts, Hacker Laws and Security Audit references when provided. "
         "Use evidence-first reasoning for authorized bug-bounty projects; "
         "distinguish confirmed tests from hypotheses and do not invent tool output. "
-        "Keep answers concise and directly responsive."
+        "Keep answers concise and directly responsive. "
+        "Real local integration observations: "+json.dumps(evidence,ensure_ascii=False)[:6000]+
+        "\nOriginal reference document excerpts:\n"+references+
+        "\nThe dashboard supports /atlas status, /atlas refs <id>, "
+        "and /atlas read <id> <member-path>. Do not claim to execute tools directly."
     )}] + list(reversed(history))
     payload = json.dumps({"model":ORCA_MODEL,"messages":messages,
                           "stream":False}).encode("utf-8")
