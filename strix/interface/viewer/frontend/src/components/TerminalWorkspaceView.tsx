@@ -7,8 +7,8 @@ type Session = {running:boolean;lines:string;offset:number;error:string};
 const empty=():Session=>({running:false,lines:"",offset:0,error:""});
 const NAMES=["Kali — Main","Kali — HexStrike","Kali — Research"];
 const PRESETS=[
-  {label:"HexStrike API",command:"if (echo >/dev/tcp/127.0.0.1/8888) >/dev/null 2>&1; then echo "[HEX] API already listening on :8888 — no duplicate process"; else cd ~/tools/hexstrike-ai && source hexstrike-env/bin/activate && python3 -u hexstrike_server.py --port 8888; fi"},
-  {label:"MCP Bridge",command:"if (echo >/dev/tcp/127.0.0.1/8000) >/dev/null 2>&1; then echo "[HEX] MCP already listening on :8000 — existing session retained"; else cd ~/tools/hexstrike-ai && source hexstrike-env/bin/activate && python3 hexstrike_mcp.py --server http://127.0.0.1:8888 --timeout 600; fi"},
+  {label:"HexStrike API",command:`if (echo >/dev/tcp/127.0.0.1/8888) >/dev/null 2>&1; then echo "[HEX] API already listening on :8888 — no duplicate process"; else cd ~/tools/hexstrike-ai && source hexstrike-env/bin/activate && python3 -u hexstrike_server.py --port 8888; fi`},
+  {label:"MCP Bridge",command:`if (echo >/dev/tcp/127.0.0.1/8000) >/dev/null 2>&1; then echo "[HEX] MCP already listening on :8000 — existing session retained"; else cd ~/tools/hexstrike-ai && source hexstrike-env/bin/activate && python3 hexstrike_mcp.py --server http://127.0.0.1:8888 --timeout 600; fi`},
   {label:"Atlas Diagnostics",command:"cd ~/Atlas-Arena-by-strix && python3 -c 'import sys;sys.path.insert(0,\"atlas_hq\");import mcp_client;print(mcp_client.inspect())'"},
   {label:"OpenAI Tunnel (T3)",command:"bash ~/Atlas-Arena-by-strix/atlas_hq/start_tunnel.sh"},
 ];
