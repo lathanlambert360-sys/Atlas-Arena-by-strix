@@ -10,12 +10,19 @@ from urllib.request import urlopen
 from urllib.error import URLError, HTTPError
 
 ROOT=Path.home()/"orcacyber"/"references"
+BUILTIN_ROOT=Path(__file__).resolve().parent/"references"
 ARCHIVES={
     "blackhat-roadmap":"The-BlackHAT-roadmap-main(8).zip",
     "hacker-scripts":"hacker-scripts-master(2).zip",
     "hacker-laws":"hacker-laws-main(3).zip",
     "security-audit":"security-audit-skill-main(10).zip",
 }
+DIRECTORIES={
+    "api-anything":BUILTIN_ROOT/"api-anything",
+    "hackingtool":BUILTIN_ROOT/"hackingtool",
+}
+
+DOC_SUFFIXES=(".md",".txt",".rst")
 
 def references():
     result=[]
@@ -25,26 +32,47 @@ def references():
         if p.is_file():
             try:
                 with zipfile.ZipFile(p) as z:
-                    docs=[s for s in z.namelist() if s.lower().endswith((".md",".txt",".rst"))]
+                    docs=[s for s in z.namelist() if s.lower().endswith(DOC_SUFFIXES)]
                     item["documents"]=len(docs)
                     item["sample_paths"]=docs[:25]
             except (OSError,zipfile.BadZipFile):
                 item["available"]=False
         result.append(item)
+    for name,root in DIRECTORIES.items():
+        docs=[]
+        if root.is_dir():
+            docs=[str(p.relative_to(root)) for p in root.rglob("*")
+                  if p.is_file() and p.suffix.lower() in DOC_SUFFIXES]
+        result.append({"id":name,"available":bool(docs),"documents":len(docs),
+                       "sample_paths":docs[:25]})
     return result
 
 def read_reference(name,member,limit=14000):
-    if name not in ARCHIVES:raise ValueError("Unknown archive")
-    with zipfile.ZipFile(ROOT/ARCHIVES[name]) as z:
-        item=z.getinfo(member)
-        if item.file_size>1_000_000 or not member.lower().endswith((".md",".txt",".rst")):
+    if name in ARCHIVES:
+        with zipfile.ZipFile(ROOT/ARCHIVES[name]) as z:
+            item=z.getinfo(member)
+            if item.file_size>1_000_000 or not member.lower().endswith(DOC_SUFFIXES):
+                raise ValueError("Unsupported document")
+            return z.read(member).decode("utf-8","replace")[:limit]
+    if name in DIRECTORIES:
+        root=DIRECTORIES[name].resolve()
+        file=(root/member).resolve()
+        if not file.is_relative_to(root) or file.suffix.lower() not in DOC_SUFFIXES:
             raise ValueError("Unsupported document")
-        return z.read(member).decode("utf-8","replace")[:limit]
+        if not file.is_file() or file.stat().st_size>1_000_000:
+            raise ValueError("Document missing or too large")
+        return file.read_text(encoding="utf-8",errors="replace")[:limit]
+    raise ValueError("Unknown archive")
 
 def inventory(name):
-    if name not in ARCHIVES:raise ValueError("Unknown archive")
-    with zipfile.ZipFile(ROOT/ARCHIVES[name]) as z:
-        return [p for p in z.namelist() if p.lower().endswith((".md",".txt",".rst"))][:250]
+    if name in ARCHIVES:
+        with zipfile.ZipFile(ROOT/ARCHIVES[name]) as z:
+            return [p for p in z.namelist() if p.lower().endswith(DOC_SUFFIXES)][:250]
+    if name in DIRECTORIES:
+        root=DIRECTORIES[name]
+        return [str(p.relative_to(root)) for p in root.rglob("*")
+                if p.is_file() and p.suffix.lower() in DOC_SUFFIXES][:250]
+    raise ValueError("Unknown archive")
 
 def probe(url):
     try:
