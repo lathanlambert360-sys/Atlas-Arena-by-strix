@@ -42,6 +42,7 @@ import Sidebar from "@/components/Sidebar";
 import IndependentWorkspaceView from "@/components/IndependentWorkspaceView";
 import LocalReportExport from "@/components/LocalReportExport";
 import TerminalWorkspaceView from "@/components/TerminalWorkspaceView";
+import LiveOperationsOverview from "@/components/LiveOperationsOverview";
 import AtlasChatView from "@/components/AtlasChatView";
 import ThreatGlobeView from "@/components/ThreatGlobeView";
 import PastRunsView from "@/components/PastRunsView";
@@ -369,7 +370,7 @@ export default function App() {
               onExit={(dest) => setView(dest)}
             />
           ) : view === "terminal" ? (
-            <TerminalWorkspaceView events={run?.transcript.events ?? []} />
+            <TerminalWorkspaceView />
           ) : view === "pr-reviews" || view === "integrations" || view === "members" ? (
             <IndependentWorkspaceView page={view} connections={mcpConnections} />
           ) : view === "history" ? (
@@ -704,6 +705,7 @@ function OverviewTab({
 
   return (
     <div className="space-y-6">
+      <LiveOperationsOverview />
       <div className="animate-card-in">
         <RunDetails raw={raw} durationSeconds={summary.durationSeconds} />
       </div>
@@ -801,6 +803,7 @@ function AgentsTab({ run, canSteer }: { run: LoadedRun; canSteer: boolean }) {
 
   return (
     <div className="space-y-5">
+      <LiveOperationsOverview compact />
       <div className="rounded-xl border border-[#222] bg-[rgba(255,255,255,0.02)] p-5">
         <div className="flex items-center gap-2">
           <Bot className="w-4 h-4 text-[#888]" aria-hidden="true" />
@@ -810,7 +813,7 @@ function AgentsTab({ run, canSteer }: { run: LoadedRun; canSteer: boolean }) {
           </span>
         </div>
         <p className="mt-1 mb-4 text-xs text-[#666]">
-          Click an agent to open its full transcript.
+          Archived run agent graph. Click an agent to open its recorded transcript; live OrcaCyber status is shown above.
         </p>
         <div className="h-[480px] rounded-lg border border-[#1a1a1a] overflow-hidden">
           <AgentGraph
