@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Terminal, Play, XCircle, Copy } from "lucide-react";
 
 // Real interactive Kali PTYs on the authenticated local host: not event mockups.
@@ -19,10 +19,54 @@ async function post(path:string,body:Record<string,unknown>):Promise<{ok:boolean
   if(!res.ok||!data.ok)throw Error(data.error||"Terminal request failed");
   return data;
 }
-function cleanAnsi(s:string):string {
-  return s.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g,"")
-    .replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g,"")
-    .replace(/\r(?!\n)/g,"\n").replace(/\x08/g,"");
+const ANSI_16=[
+ "#121212","#ff5668","#3cff87","#ffd84b","#5da9ff","#ff70d0","#25e4ff","#eeeeee",
+ "#737b84","#ff8c9c","#00ff6a","#ffe86d","#79caff","#ff99e7","#62f6ff","#ffffff"
+];
+function ansiColor(n:number):string {
+ if(n<16)return ANSI_16[n]||"#eafaff";
+ if(n>=232)return "rgb("+[8+(n-232)*10,8+(n-232)*10,8+(n-232)*10].join(",")+")";
+ const q=n-16,level=(v:number)=>v===0?0:55+v*40;
+ return "rgb("+[level(Math.floor(q/36)%6),level(Math.floor(q/6)%6),level(q%6)].join(",")+")";
+}
+/** Render actual SGR color/weight from Kali's ANSI output (no synthetic all-green recoloring). */
+function AnsiOutput({raw}:{raw:string}) {
+ const segments=useMemo(()=>{
+  let color="#00ff70",background:undefined|string,weight=400,dim=false;
+  const parsed:{text:string;style:CSSProperties}[]=[];
+  const src=raw.replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g,"").replace(/\r(?!\n)/g,"\n");
+  const rx=/\x1b\[([0-9;]*)m|\x1b\[[0-?]*[ -/]*[@-~]/g;
+  let last=0,match:RegExpExecArray|null;
+  const push=(text:string)=>{if(text)parsed.push({text,style:{color,backgroundColor:background,fontWeight:weight,opacity:dim?0.65:1}})};
+  while((match=rx.exec(src))!==null){
+   push(src.slice(last,match.index));
+   last=rx.lastIndex;
+   if(match[1]===undefined)continue;
+   const codes=(match[1]||"0").split(";").map(v=>v===""?0:Number(v));
+   for(let i=0;i<codes.length;i++){
+    const c=codes[i];
+    if(c===0){color="#00ff70";background=undefined;weight=400;dim=false}
+    else if(c===1)weight=700;
+    else if(c===2)dim=true;
+    else if(c===22){weight=400;dim=false}
+    else if(c===39)color="#00ff70";
+    else if(c===49)background=undefined;
+    else if(c>=30&&c<=37)color=ansiColor(c-30);
+    else if(c>=90&&c<=97)color=ansiColor(c-90+8);
+    else if(c>=40&&c<=47)background=ansiColor(c-40);
+    else if(c>=100&&c<=107)background=ansiColor(c-100+8);
+    else if((c===38||c===48)&&codes[i+1]===5&&codes[i+2]!==undefined){
+     const v=ansiColor(codes[i+2]);if(c===38)color=v;else background=v;i+=2;
+    }else if((c===38||c===48)&&codes[i+1]===2&&codes[i+4]!==undefined){
+     const v="rgb("+codes.slice(i+2,i+5).map(n=>Math.max(0,Math.min(255,n))).join(",")+")";
+     if(c===38)color=v;else background=v;i+=4;
+    }
+   }
+  }
+  push(src.slice(last));
+  return parsed;
+ },[raw]);
+ return <>{segments.map((s,i)=><span key={i} style={s.style}>{s.text}</span>)}</>;
 }
 function PTY({index}:{index:number}) {
   const slot=index+1;
@@ -39,7 +83,7 @@ function PTY({index}:{index:number}) {
       if(!res.ok)throw Error("Terminal session unavailable: HTTP "+res.status);
       const data=await res.json() as PTYResult;
       pos.current=data.next_offset;
-      setTerm(t=>({running:data.running,lines:(t.lines+cleanAnsi(data.output||"")).slice(-115000),
+      setTerm(t=>({running:data.running,lines:(t.lines+(data.output||"")).slice(-115000),
         offset:data.next_offset,error:""}));
     }catch(e){setTerm(t=>({...t,error:String(e)}))}
   },[slot]);
@@ -85,8 +129,8 @@ function PTY({index}:{index:number}) {
         className="text-rose-400 disabled:opacity-30" title="Close terminal"><XCircle className="h-4 w-4"/></button>
     </div>
     <pre ref={view} role="log" aria-label={NAMES[index]+" actual Kali terminal output"}
-      className="h-[450px] overflow-auto whitespace-pre-wrap break-words bg-black px-3 py-3 font-mono text-[13px] leading-[20px] [text-shadow:0_0_8px_#00dfff88] text-emerald-400">
-      {term.lines||(term.running?"Starting interactive Kali shell…":"Click Open to start a real interactive Kali shell.")}
+      className="h-[450px] overflow-auto whitespace-pre-wrap break-words bg-black px-3 py-3 font-mono text-[13px] leading-[20px] [text-shadow:0_0_5px_currentColor] text-[#00ff70]">
+      {term.lines?<AnsiOutput raw={term.lines}/>:term.running?"Starting interactive Kali shell…":"Click Open to start a real interactive Kali shell."}
     </pre>
     <form onSubmit={onCommand} className="flex items-center border-t border-cyan-800/60 bg-[#03131b] px-2 py-1.5">
       <span className="px-1 text-emerald-400">$</span>
