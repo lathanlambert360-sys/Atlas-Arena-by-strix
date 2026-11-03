@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Terminal, Play, RefreshCcw, XCircle, Copy, ExternalLink } from "lucide-react";
+import { Terminal, Play, XCircle, Copy } from "lucide-react";
 
 // Real interactive Kali PTYs on the authenticated local host: not event mockups.
 type PTYResult = {ok?:boolean;running:boolean;slot:number;output:string;next_offset:number;error?:string};
@@ -66,16 +66,17 @@ function PTY({index}:{index:number}) {
     }catch(e){setTerm(t=>({...t,error:String(e)}))}
   };
   const stop=async()=>{try{await post("/api/terminal/stop",{slot});await refresh()}catch(e){setTerm(t=>({...t,error:String(e)}))}};
-  const onCommand=(e:React.FormEvent)=>{e.preventDefault();if(term.running&&cmd)void send(cmd+"\n")};
-  return <section className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-emerald-900/70 bg-[#030b07]">
-    <div className="flex flex-wrap items-center gap-2 border-b border-emerald-900/70 bg-[#08180f] px-3 py-2.5">
-      <Terminal className="h-4 w-4 text-emerald-400" />
-      <strong className="text-sm text-emerald-200">{NAMES[index]}</strong>
+  const onCommand=(e:React.FormEvent)=>{e.preventDefault();if(term.running&&cmd.trim())void send(cmd.replace(/\r\n/g,"\n")+"\n")};
+  const runPreset=async(command:string)=>{if(!term.running){setTerm(t=>({...t,error:"Open this terminal first"}));return;}await send(command+"\n")};
+  return <section className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-cyan-500/50 bg-[#01070b] shadow-[inset_0_0_16px_#00dfff0c]">
+    <div className="flex flex-wrap items-center gap-2 border-b border-cyan-500/40 bg-[#05141c] px-3 py-2.5">
+      <Terminal className="h-4 w-4 text-[#00f0ff] [text-shadow:0_0_8px_#00eaff80]" />
+      <strong className="text-sm text-[#b7f9ff]">{NAMES[index]}</strong>
       <span className={"ml-auto text-[11px] "+(term.running?"text-emerald-400":"text-[#718675]")}>
         {term.running?"● LIVE PTY":"○ stopped"}
       </span>
       <button disabled={pending} onClick={()=>void start()}
-        className="rounded border border-emerald-800 px-2 py-1 text-xs text-emerald-200 hover:bg-emerald-950 disabled:opacity-50"
+        className="rounded border border-cyan-600/70 px-2 py-1 text-xs text-emerald-200 hover:bg-cyan-950 disabled:opacity-50"
         title="Start an interactive bash process"><Play className="inline h-3 w-3"/> Open</button>
       <button disabled={!term.running} onClick={()=>void send("\u0003",false)}
         className="rounded border border-[#565e54] px-2 py-1 text-xs text-[#c0cfc1] disabled:opacity-30">Ctrl+C</button>
@@ -83,24 +84,25 @@ function PTY({index}:{index:number}) {
         className="text-rose-400 disabled:opacity-30" title="Close terminal"><XCircle className="h-4 w-4"/></button>
     </div>
     <pre ref={view} role="log" aria-label={NAMES[index]+" actual Kali terminal output"}
-      className="h-[450px] overflow-auto whitespace-pre-wrap break-words bg-black px-3 py-3 font-mono text-[12px] leading-[18px] text-emerald-400">
+      className="h-[450px] overflow-auto whitespace-pre-wrap break-words bg-black px-3 py-3 font-mono text-[13px] leading-[20px] [text-shadow:0_0_8px_#00dfff88] text-emerald-400">
       {term.lines||(term.running?"Starting interactive Kali shell…":"Click Open to start a real interactive Kali shell.")}
     </pre>
-    <form onSubmit={onCommand} className="flex items-center border-t border-emerald-900 bg-[#051108] px-2 py-1.5">
+    <form onSubmit={onCommand} className="flex items-center border-t border-cyan-800/60 bg-[#03131b] px-2 py-1.5">
       <span className="px-1 text-emerald-400">$</span>
-      <input value={cmd} onChange={e=>setCmd(e.target.value)}
+      <textarea rows={2} value={cmd} onChange={e=>setCmd(e.target.value)}
+        onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();if(term.running&&cmd.trim())void send(cmd.replace(/\r\n/g,"\n")+"\n")}}}
         disabled={!term.running} spellCheck={false} autoComplete="off"
         aria-label={NAMES[index]+" shell command"}
-        placeholder={term.running?"Enter Kali command…":"Open a terminal first"}
-        className="min-w-0 flex-1 bg-transparent px-2 py-2 font-mono text-sm text-white outline-none placeholder:text-[#6b8275]"/>
+        placeholder={term.running?"Paste commands here (multiline supported). Enter to run.":"Open a terminal first"}
+        className="min-w-0 flex-1 resize-y bg-transparent px-2 py-2 font-mono text-sm text-[#d4fbff] outline-none placeholder:text-[#6995a5]"/>
       <button disabled={!term.running||!cmd} type="submit"
-        className="rounded bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-30">Enter ↵</button>
+        className="rounded bg-cyan-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-30">Enter ↵</button>
     </form>
-    <div className="flex flex-wrap gap-2 border-t border-emerald-950 px-2 py-2">
-      {PRESETS.map(p=><button key={p.label} title={p.command} onClick={()=>setCmd(p.command)}
-        className="rounded border border-[#2b4a39] px-2 py-1 text-[11px] text-emerald-300 hover:bg-[#153022]">{p.label}</button>)}
+    <div className="flex flex-wrap gap-2 border-t border-cyan-900/50 px-2 py-2">
+      {PRESETS.map(p=><button key={p.label} title={"Run now: "+p.command} onClick={()=>void runPreset(p.command)}
+        disabled={!term.running} className="rounded border border-[#2b667b] disabled:opacity-40 px-2 py-1 text-[11px] text-[#7af2ff] hover:bg-[#0b3445]">{p.label}</button>)}
       <button onClick={()=>navigator.clipboard.writeText(term.lines)}
-        className="ml-auto text-[#8da699]" title="Copy real terminal logs"><Copy className="h-4 w-4"/></button>
+        className="ml-auto text-[#78cfe8]" title="Copy real terminal logs"><Copy className="h-4 w-4"/></button>
     </div>
     {term.error&&<p className="border-t border-red-900 px-3 py-2 text-xs text-red-400">{term.error}</p>}
   </section>;
