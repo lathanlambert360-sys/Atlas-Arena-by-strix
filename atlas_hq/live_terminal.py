@@ -11,6 +11,7 @@ import select
 import signal
 import struct
 import subprocess
+import shutil
 import termios
 import threading
 
@@ -107,3 +108,14 @@ def status():
     with GUARD:
         return [{"slot":n,"running":bool(SESSIONS.get(n) and SESSIONS[n]["proc"].poll() is None)}
                 for n in (1,2,3)]
+
+
+def open_windows_terminal():
+    """Launch an actual Windows Terminal window via WSL interoperability."""
+    executable=shutil.which("wt.exe")
+    if executable:
+        subprocess.Popen([executable,"-w","0","new-tab","wsl.exe"],
+                         stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL,start_new_session=True)
+        return {"launched":True,"application":"Windows Terminal"}
+    raise ValueError("wt.exe not found via WSL interop; start Windows Terminal from Windows")
