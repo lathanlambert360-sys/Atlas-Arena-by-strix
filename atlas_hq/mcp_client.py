@@ -10,7 +10,7 @@ import time
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
-ENDPOINT = os.environ.get("ATLAS_HEX_MCP_URL","http://127.0.0.1:8000/mcp")
+ENDPOINT = os.environ.get("ATLAS_HEX_MCP_URL","http://127.0.0.1:8001/mcp")
 LOCK=threading.RLock()
 VERSION="2025-03-26"
 CACHE={"time":0.0,"result":None}
