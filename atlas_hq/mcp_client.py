@@ -36,7 +36,7 @@ def request(method,params=None,session=None,notification=False):
         payload["id"]=7
     if params is not None:payload["params"]=params
     req=Request(ENDPOINT,data=json.dumps(payload).encode(),headers=headers,method="POST")
-    with urlopen(req,timeout=30) as resp:
+    with urlopen(req,timeout=(90 if method=='tools/call' else 4)) as resp:
         body=resp.read(2_000_000).decode("utf-8","replace")
         return parse(body,resp.headers.get("Content-Type","")),resp.headers.get("Mcp-Session-Id",session)
 
