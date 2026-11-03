@@ -101,3 +101,9 @@ def stop(slot):
         if session and session["proc"].poll() is None:
             os.killpg(session["proc"].pid,signal.SIGHUP)
         return {"stopped":True}
+
+
+def status():
+    with GUARD:
+        return [{"slot":n,"running":bool(SESSIONS.get(n) and SESSIONS[n]["proc"].poll() is None)}
+                for n in (1,2,3)]
