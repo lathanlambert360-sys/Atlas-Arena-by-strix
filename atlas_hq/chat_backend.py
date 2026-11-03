@@ -7,6 +7,9 @@ No API keys or shell-command parameters are accepted through the HTTP API.
 """
 from __future__ import annotations
 import json
+import os
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
 import shutil
 import sqlite3
 import subprocess
@@ -20,6 +23,11 @@ LOCK = threading.RLock()
 AUTH = {"process": None, "lines": [], "checked": 0.0, "logged_in": False}
 MAX_MESSAGES = 500
 MAX_CONTENT = 12000
+ORCA_URL = "https://api.orcarouter.ai/v1/chat/completions"
+ORCA_MODEL = "orca/orcacyber-flash-1.0-free"
+
+def orca_ready():
+    return bool(os.environ.get("ORCAROUTER_API_KEY", "").strip())
 
 def utcnow():
     return datetime.now(timezone.utc).isoformat()
@@ -104,17 +112,19 @@ def state(db):
         proc=AUTH["process"]
         device={"running":bool(proc and proc.poll() is None),
                 "output":"\n".join(AUTH["lines"])[-2800:]}
-    return {"available":bool(codex_exe()),"authenticated":auth_status(),
+    return {"available":orca_ready() or bool(codex_exe()),"authenticated":orca_ready() or auth_status(),
             "session":{"status":row["status"],"updated":row["updated"],"error":row["error"]},
             "messages":list(reversed(msgs)),"device_auth":device,
-            "engine":"Local Codex CLI (separate session from ChatGPT)",
+            "engine":("OrcaCyber Flash (OrcaRouter)" if orca_ready() else "Local Codex CLI"),
+            "provider":("orca" if orca_ready() else "codex"),
             "sandbox":"read-only"}
 
 def send(db, workspace, message):
     if not isinstance(message,str) or not (1 <= len(message.strip()) <= 5000):
         return 400, {"ok":False,"error":"Message must be 1-5000 characters"}
-    if not auth_status(force=True):
-        return 409, {"ok":False,"error":"Codex is not signed in. Select Connect Codex."}
+    use_orca = orca_ready()
+    if not use_orca and not auth_status(force=True):
+        return 409, {"ok":False,"error":"OrcaRouter key missing and Codex is not signed in."}
     with LOCK:
         with connect(db) as con:
             row=con.execute("SELECT thread,status FROM atlas_chat_session WHERE id=1").fetchone()
@@ -125,8 +135,13 @@ def send(db, workspace, message):
                         (ident,"user",message.strip(),utcnow()))
             con.execute("UPDATE atlas_chat_session SET status='running',error=NULL,updated=? WHERE id=1",(utcnow(),))
             previous_thread=row["thread"]
-        threading.Thread(target=_worker,args=(str(db),str(workspace),previous_thread,message.strip()),
-                         daemon=True).start()
+        if use_orca:
+            target = _orca_worker
+            arguments = (str(db),)
+        else:
+            target = _worker
+            arguments = (str(db),str(workspace),previous_thread,message.strip())
+        threading.Thread(target=target,args=arguments,daemon=True).start()
     return 202, {"ok":True,"accepted":True}
 
 def _worker(db, workspace, session_id, user_prompt):
@@ -196,3 +211,48 @@ def _worker(db, workspace, session_id, user_prompt):
                         (str(exc)[:450],thread_id,utcnow()))
     finally:
         if proc is not None and proc.poll() is None:proc.kill()
+
+
+def _orca_worker(db):
+    """Remote reasoning through OrcaRouter; no shell execution or scans."""
+    with connect(db) as con:
+        history = [dict(r) for r in con.execute(
+            "SELECT role,content FROM atlas_chat_message ORDER BY rowid DESC LIMIT 24"
+        ).fetchall()]
+    messages = [{"role":"system","content":(
+        "You are Atlas HQ's cybersecurity research assistant. "
+        "Complement your own cyber harness with the BlackHAT Roadmap, "
+        "Hacker Scripts, Hacker Laws and Security Audit references when provided. "
+        "Use evidence-first reasoning for authorized bug-bounty projects; "
+        "distinguish confirmed tests from hypotheses and do not invent tool output. "
+        "Keep answers concise and directly responsive."
+    )}] + list(reversed(history))
+    payload = json.dumps({"model":ORCA_MODEL,"messages":messages,
+                          "stream":False}).encode("utf-8")
+    try:
+        key = os.environ["ORCAROUTER_API_KEY"].strip()
+        req = Request(ORCA_URL,data=payload,method="POST",headers={
+            "Authorization":"Bearer "+key,
+            "Content-Type":"application/json",
+            "Accept":"application/json"
+        })
+        with urlopen(req,timeout=120) as reply:
+            response = json.load(reply)
+        answer = response["choices"][0]["message"]["content"]
+        if not isinstance(answer,str) or not answer.strip():
+            raise ValueError("OrcaRouter returned an empty text response")
+        with connect(db) as con:
+            con.execute("INSERT INTO atlas_chat_message(id,role,content,created) VALUES(?,?,?,?)",
+                        ("ast-"+uuid.uuid4().hex,"assistant",answer[:MAX_CONTENT],utcnow()))
+            con.execute("UPDATE atlas_chat_session SET status='idle',error=NULL,updated=? WHERE id=1",(utcnow(),))
+    except HTTPError as exc:
+        # Never echo API keys, authorization headers, or provider response bodies.
+        error = "OrcaRouter HTTP "+str(exc.code)
+        with connect(db) as con:
+            con.execute("UPDATE atlas_chat_session SET status='failed',error=?,updated=? WHERE id=1",
+                        (error,utcnow()))
+    except (URLError, TimeoutError, KeyError, ValueError, OSError, TypeError, IndexError) as exc:
+        error = "OrcaRouter request failed: "+type(exc).__name__
+        with connect(db) as con:
+            con.execute("UPDATE atlas_chat_session SET status='failed',error=?,updated=? WHERE id=1",
+                        (error,utcnow()))
