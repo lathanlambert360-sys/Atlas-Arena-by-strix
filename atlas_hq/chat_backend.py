@@ -277,6 +277,7 @@ def _orca_worker(db):
     evidence = atlas_tools.status()
     mcp = mcp_client.inspect()
     references = _references_for_model()
+    original_strix = atlas_tools.strix_agent_context()
     messages = [{"role":"system","content":(
         "You are Atlas HQ's cybersecurity research assistant. "
         "Complement your own cyber harness with the BlackHAT Roadmap, "
@@ -287,6 +288,7 @@ def _orca_worker(db):
         "Real local integration observations: "+json.dumps(evidence,ensure_ascii=False)[:6000]+
         "\nLive HexStrike MCP tool inventory: "+json.dumps(mcp,ensure_ascii=False)[:7500]+
         "\nOriginal reference document excerpts:\n"+references+
+        "\nOriginal Strix OSS agent guide excerpts:\n"+original_strix+
         "\nThe dashboard supports /atlas status, /atlas refs <id>, "
         "and /atlas read <id> <member-path>. "
         "When an MCP tool is needed, propose ONE JSON request in this format: "
