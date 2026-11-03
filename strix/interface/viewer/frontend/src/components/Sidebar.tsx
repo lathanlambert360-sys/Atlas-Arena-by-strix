@@ -8,6 +8,7 @@ import {
   LogOut,
   ChevronsUpDown,
   Terminal,
+  Globe2,
 } from "lucide-react";
 import { LuGitPullRequestArrow } from "react-icons/lu";
 import { VscExtensions } from "react-icons/vsc";
@@ -228,6 +229,12 @@ export default function Sidebar({
               onClick={() => onSelectView("chat")}
             />
             <hr className="mx-0 my-1 h-px w-full border-0 bg-[rgba(255,255,255,0.08)]" />
+            <NavItem
+              icon={<Globe2 className="h-4 w-4" />}
+              label="Threat Intelligence"
+              active={view === "threats"}
+              onClick={() => onSelectView("threats")}
+            />
             <NavItem
               icon={<ProjectsIcon />}
               label="Pentest Overview"
