@@ -1,6 +1,7 @@
 """Local Atlas dashboard telemetry and unchanged ZIP reference access."""
 import json
 import socket
+import mcp_client
 import zipfile
 from pathlib import Path
 from urllib.request import urlopen
@@ -53,17 +54,17 @@ def probe(url):
         return {"connected":False,"error":type(exc).__name__}
 
 def status():
-    with socket.socket() as sock:
-        sock.settimeout(1)
-        try:
-            sock.connect(("127.0.0.1",8000))
-            bridge={"reachable":True,"mcp_initialized":False}
-        except OSError:
-            bridge={"reachable":False,"mcp_initialized":False}
+    def port_ready(port):
+        with socket.socket() as sock:
+            sock.settimeout(0.7)
+            try:sock.connect(("127.0.0.1",port));return True
+            except OSError:return False
+    api=port_ready(8888)
     return {
-        "hexstrike":probe("http://127.0.0.1:8888/health"),
-        "hexstrike_tools":probe("http://127.0.0.1:8888/api/tools/status"),
-        "mcp_bridge":bridge,
+        "hexstrike":{"reachable":api,"port":8888,"health_http":("deferred: health collection may be slow" if api else "offline")},
+        "hexstrike_tools":{"source":"live MCP tool inventory","tools_available":mcp_client.inspect().get("count",0)},
+        "mcp_bridge":{"port":8000,"reachable":port_ready(8000),"role":"existing T3 tunnel MCP"},
+        "atlas_mcp":{"port":8001,"reachable":port_ready(8001),"protocol":mcp_client.inspect()},
         "references":references()
     }
 
