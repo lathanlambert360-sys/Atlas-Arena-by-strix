@@ -64,7 +64,7 @@ export default function App() {
   const [run, setRun] = useState<LoadedRun | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [view, setView] = useState<View>("chat");
+  const [view, setView] = useState<View>("threats");
   const [auth, setAuth] = useState<AuthStatus | null>(null);
   const [runs, setRuns] = useState<RunsPayload | null>(null);
   const [emailPurpose, setEmailPurpose] = useState<"report" | "verify">("report");
@@ -210,7 +210,7 @@ export default function App() {
 
   useEffect(() => {
     if (initialViewAppliedRef.current || !run) return;
-    if (view === "chat") { initialViewAppliedRef.current = true; return; }
+    if (view === "chat" || view === "threats") { initialViewAppliedRef.current = true; return; }
     if (run.finished) {
       initialViewAppliedRef.current = true;
       setView("overview");
