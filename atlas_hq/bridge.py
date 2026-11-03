@@ -16,6 +16,7 @@ import sqlite3
 import chat_backend
 import atlas_actions
 import live_terminal
+import atlas_tools
 from urllib.request import urlopen
 from urllib.error import URLError, HTTPError
 from datetime import datetime, timezone
@@ -184,6 +185,37 @@ class Handler(SimpleHTTPRequestHandler):
             row = choose_run(db, name)
             if name and row is None and endpoint in ("run", "transcript", "vulnerabilities", "report"):
                 return self.reply(404, {"error": "run_not_found"})
+            if endpoint == "knowledge":
+                return self.reply(200,atlas_tools.strix_knowledge_manifest())
+            if endpoint == "knowledge/document":
+                path=args.get("path",[""])[0]
+                try:return self.reply(200,atlas_tools.strix_document(path))
+                except (ValueError,OSError) as exc:return self.reply(404,{"error":str(exc)[:200]})
+            if endpoint == "stats":
+                import time
+                from datetime import datetime,timezone
+                runs=db.execute("SELECT COUNT(*) FROM runs").fetchone()[0]
+                active=db.execute("SELECT COUNT(*) FROM runs WHERE finished=0").fetchone()[0]
+                events=db.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+                agents=db.execute("SELECT COUNT(*) FROM agents").fetchone()[0]
+                findings=db.execute("SELECT COUNT(*) FROM findings").fetchone()[0]
+                severities={"critical":0,"high":0,"medium":0,"low":0,"unknown":0}
+                for row_f in db.execute("SELECT data FROM findings"):
+                    try:
+                        sev=str(json.loads(row_f["data"]).get("severity","unknown")).lower()
+                    except (ValueError,TypeError,KeyError):sev="unknown"
+                    severities[sev if sev in severities else "unknown"]+=1
+                try:
+                    tools=db.execute("SELECT status,COUNT(*) AS n FROM atlas_tool_requests GROUP BY status").fetchall()
+                    tool_counts={r["status"]:r["n"] for r in tools}
+                except sqlite3.OperationalError:tool_counts={}
+                try:
+                    conversations=db.execute("SELECT COUNT(*) FROM atlas_chat_message").fetchone()[0]
+                except sqlite3.OperationalError:conversations=0
+                return self.reply(200,{"timestamp":now(),"source":"local SQLite + PTY state",
+                    "runs":runs,"active_runs":active,"events":events,"agents":agents,
+                    "findings":findings,"severities":severities,"tool_calls":tool_counts,
+                    "chat_messages":conversations,"terminals":live_terminal.status()})
             if endpoint == "chat":
                 return self.reply(200, chat_backend.state(self.server.db))
             if endpoint in ("health", "integrations"):
