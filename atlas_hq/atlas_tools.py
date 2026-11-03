@@ -1,5 +1,7 @@
 """Local Atlas dashboard telemetry and unchanged ZIP reference access."""
 import json
+import hashlib
+import subprocess
 import socket
 import mcp_client
 import zipfile
@@ -79,3 +81,49 @@ def strix_agent_context():
         text=file.read_text(encoding="utf-8",errors="replace")
         excerpts.append(relative+"\n"+text[:3200])
     return "\n\n".join(excerpts)[:6200]
+
+
+def strix_knowledge_manifest():
+    """Inspectable, original repository evidence; hashes are of local bytes."""
+    root=Path(__file__).resolve().parents[1]
+    all_paths=[]
+    for prefix in ("strix","AGENTS.md","README.md"):
+        base=root/prefix
+        if base.is_file():
+            all_paths.append(base)
+        elif base.is_dir():
+            all_paths.extend(p for p in base.rglob("*") if p.is_file() and
+                             ".git" not in p.parts and "node_modules" not in p.parts and
+                             ".venv" not in p.parts and "static" not in p.parts and
+                             "__pycache__" not in p.parts)
+    size=sum(p.stat().st_size for p in all_paths)
+    docs=[p for p in all_paths if p.suffix.lower() in (".md",".txt",".rst",".yaml",".yml",".toml")]
+    snippets=[]
+    for path in docs:
+        rel=str(path.relative_to(root))
+        if len(snippets)>=120:break
+        snippets.append({"path":rel,"bytes":path.stat().st_size,
+                         "sha256":hashlib.sha256(path.read_bytes()).hexdigest()})
+    try:
+        head=subprocess.run(["git","-C",str(root),"rev-parse","HEAD"],capture_output=True,text=True,timeout=2)
+        commit=head.stdout.strip() if head.returncode==0 else None
+    except (OSError,subprocess.TimeoutExpired):commit=None
+    return {"root":str(root),"commit":commit,"tracked_source_files":len(all_paths),
+            "total_source_bytes":size,"documentation_files":len(docs),
+            "indexed_documents":snippets,"agent_guide_readable":bool(strix_agent_context()),
+            "research_archives":references()}
+
+def strix_document(path):
+    """Read only original Strix documentation, not secrets or executable sources."""
+    root=Path(__file__).resolve().parents[1]
+    file=(root/path).resolve()
+    if not file.is_relative_to(root):raise ValueError("Path outside repository")
+    if path not in ("AGENTS.md","README.md") and not path.startswith("strix/"):
+        raise ValueError("Unknown Strix knowledge path")
+    if file.suffix.lower() not in (".md",".txt",".rst",".yaml",".yml",".toml"):
+        raise ValueError("Only documentation files may be read")
+    if not file.is_file() or file.stat().st_size>500000:
+        raise ValueError("File missing or too large")
+    raw=file.read_bytes()
+    return {"path":str(file.relative_to(root)),"sha256":hashlib.sha256(raw).hexdigest(),
+            "content":raw.decode("utf-8","replace")[:32000],"bytes":len(raw)}
