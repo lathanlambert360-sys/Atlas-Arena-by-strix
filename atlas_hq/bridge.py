@@ -216,7 +216,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         endpoint = urlsplit(self.path).path
-        if endpoint in ("/api/chat", "/api/chat/auth/start", "/api/chat/model/test", "/api/chat/tool/decide", "/api/terminal/start", "/api/terminal/input", "/api/terminal/resize", "/api/terminal/stop"):
+        if endpoint in ("/api/chat", "/api/chat/auth/start", "/api/chat/model/test", "/api/chat/tool/decide", "/api/terminal/start", "/api/terminal/input", "/api/terminal/resize", "/api/terminal/stop", "/api/terminal/windows"):
             # Chat actions require the local browser session and a same-origin POST.
             cookies = SimpleCookie()
             try:
@@ -246,7 +246,9 @@ class Handler(SimpleHTTPRequestHandler):
             if endpoint.startswith("/api/terminal/"):
                 try:
                     slot=payload.get("slot")
-                    if endpoint == "/api/terminal/start":
+                    if endpoint == "/api/terminal/windows":
+                        result=live_terminal.open_windows_terminal()
+                    elif endpoint == "/api/terminal/start":
                         result=live_terminal.start(slot)
                     elif endpoint == "/api/terminal/input":
                         result=live_terminal.write(slot,payload.get("data"))
