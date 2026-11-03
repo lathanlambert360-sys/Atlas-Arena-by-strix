@@ -14,6 +14,7 @@ import secrets
 import shutil
 import sqlite3
 import chat_backend
+import atlas_actions
 from urllib.request import urlopen
 from urllib.error import URLError, HTTPError
 from datetime import datetime, timezone
@@ -205,7 +206,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         endpoint = urlsplit(self.path).path
-        if endpoint in ("/api/chat", "/api/chat/auth/start", "/api/chat/model/test"):
+        if endpoint in ("/api/chat", "/api/chat/auth/start", "/api/chat/model/test", "/api/chat/tool/decide"):
             # Chat actions require the local browser session and a same-origin POST.
             cookies = SimpleCookie()
             try:
@@ -232,6 +233,13 @@ class Handler(SimpleHTTPRequestHandler):
                     return self.reply(400, {"ok": False, "error": "invalid_body"})
             except (ValueError, json.JSONDecodeError):
                 return self.reply(400, {"ok": False, "error": "invalid_body"})
+            if endpoint == "/api/chat/tool/decide":
+                identifier=payload.get("id")
+                approval=payload.get("approve")
+                if not isinstance(identifier,str) or not identifier.startswith("hex-") or type(approval) is not bool:
+                    return self.reply(400, {"ok":False,"error":"invalid_tool_decision"})
+                code,result=atlas_actions.decide(self.server.db,identifier,approval,None)
+                return self.reply(code,result)
             if endpoint == "/api/chat/model/test":
                 code, result = chat_backend.test_orca()
                 return self.reply(code, result)
