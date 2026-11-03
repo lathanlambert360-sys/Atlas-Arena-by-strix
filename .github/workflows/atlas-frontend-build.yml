@@ -1,0 +1,25 @@
+name: Atlas Strix Frontend Build
+on:
+  push:
+    branches: [atlas-hq-independent]
+    paths:
+      - 'strix/interface/viewer/frontend/**'
+      - '.github/workflows/atlas-frontend-build.yml'
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: strix/interface/viewer/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: strix/interface/viewer/frontend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npx tsc --noEmit
+      - run: npm run build
+      - run: test -s ../../viewer/static/index.html
