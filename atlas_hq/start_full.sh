@@ -26,14 +26,15 @@ for _ in 1 2 3 4 5 6 7 8; do
   if check_port 8888; then break; fi
   sleep 1
 done
-if ! check_port 8000; then
-  echo "[Atlas] Starting HexStrike MCP HTTP :8000"
+if ! check_port 8001; then
+  echo "[Atlas] Starting Atlas dedicated HexStrike MCP HTTP :8001"
   (cd "$ROOT" && nohup "$PY" -u "$ROOT/atlas_hq/serve_hex_mcp.py" \
-      --hex-root "$HEX_ROOT" --port 8000 \
+      --hex-root "$HEX_ROOT" --port 8001 \
       >>"$LOG_DIR/hexstrike-mcp.log" 2>&1 < /dev/null &)
 else
-  echo "[Atlas] MCP :8000 already listening"
+  echo "[Atlas] Atlas MCP HTTP :8001 already listening"
 fi
+echo "[Atlas] Original MCP bridge :8000 remains available for your T3 tunnel"
 echo "[Atlas] HexStrike logs: $LOG_DIR"
 echo "[Atlas] Starting OrcaCyber dashboard :8917"
 exec bash "$ROOT/atlas_hq/start.sh"
