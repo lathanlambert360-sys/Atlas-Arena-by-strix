@@ -7,6 +7,9 @@ type ChatState = {
   session: { status: string; error: string | null; updated: string };
   messages: ChatMessage[];
   device_auth: { running: boolean; output: string };
+  mcp?: {connected:boolean; count?:number; tools?:string[]; error?:string};
+  reference_archives?: {id:string;available:boolean;documents?:number}[];
+  tool_requests?: {id:string;tool:string;arguments:string;reason:string;status:string;created:string}[];
 };
 export default function AtlasChatView() {
   const [data,setData] = useState<ChatState|null>(null);
@@ -55,6 +58,12 @@ export default function AtlasChatView() {
     catch(e){setError(e instanceof Error?e.message:"Model test failed");await refresh()}
     finally{setBusy(false)}
   };
+  const decideTool=async(id:string,approve:boolean)=>{
+    setBusy(true);setError("");
+    try { await post("/api/chat/tool/decide",{id,approve});await refresh() }
+    catch(e){setError(e instanceof Error?e.message:"Tool decision failed")}
+    finally{setBusy(false)}
+  };
   const connect=async()=>{
     setBusy(true);setError("");
     try {await post("/api/chat/auth/start",{});await refresh()}
@@ -81,6 +90,29 @@ export default function AtlasChatView() {
       {active&&<span className="ml-auto animate-pulse text-emerald-300">Atlas is responding…</span>}
     </div>
     {data?.provider==="orca"&&data.model_check?.verified&&<div className="text-xs text-emerald-400">Verified live API response from {data.model}</div>}
+    <div className="flex flex-wrap gap-2 text-[11px] text-[#a5b4c5]">
+      <span className="rounded border border-[#303840] px-2 py-1">
+        HexStrike MCP: {data?.mcp?.connected?("CONNECTED · "+(data.mcp.count??0)+" tools"):"NOT CONNECTED"}
+      </span>
+      {data?.reference_archives?.map(r=><span key={r.id}
+        className={`rounded border px-2 py-1 ${r.available?"border-emerald-900 text-emerald-300":"border-[#303840]"}`}>
+        {r.id}: {r.available?(r.documents??0)+" docs":"not loaded"}
+      </span>)}
+    </div>
+    {data?.tool_requests?.filter(t=>t.status==="pending"||t.status==="running").map(t=>
+      <section key={t.id} className="rounded-xl border border-amber-700/60 bg-amber-950/15 p-4">
+        <h2 className="text-sm font-semibold text-amber-200">HexStrike MCP · {t.tool}</h2>
+        <p className="mt-2 text-xs text-[#c9c9c9]">{t.reason}</p>
+        <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-all rounded bg-black/60 p-2 text-xs">{t.arguments}</pre>
+        <div className="mt-3 flex gap-3">
+          {t.status==="pending"?<>
+          <button disabled={busy} onClick={()=>void decideTool(t.id,true)}
+            className="rounded bg-emerald-700 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">Approve tool call</button>
+          <button disabled={busy} onClick={()=>void decideTool(t.id,false)}
+            className="rounded border border-[#555] px-3 py-2 text-xs text-white disabled:opacity-40">Reject</button>
+          </>:<span className="text-xs text-amber-300">HexStrike executing…</span>}
+        </div>
+      </section>)}
     {error&&<div role="alert" className="rounded-lg border border-red-800 bg-red-950/25 p-3 text-sm text-red-300">{error}</div>}
     {!data?.authenticated&&<section className="rounded-xl border border-[#333] bg-[#151515] p-5">
       <h2 className="mb-2 font-semibold text-white">Connect your existing Codex login</h2>
@@ -117,7 +149,7 @@ export default function AtlasChatView() {
         <Send className="h-4 w-4"/></button>
     </form>
     <p className="flex items-start gap-2 text-xs leading-5 text-[#777]">
-      <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0"/>Atlas Chat uses OrcaCyber Flash when the local backend has ORCAROUTER_API_KEY configured; otherwise it can use Codex. Conversation history stays in local SQLite. Tool execution is managed separately.
+      <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0"/>OrcaCyber can inspect local HexStrike MCP tools and original research archives. Proposed MCP tool calls require your approval; actual output is recorded in chat. Local commands: /atlas status · /atlas refs · /atlas read.
     </p>
   </div>;
 }
