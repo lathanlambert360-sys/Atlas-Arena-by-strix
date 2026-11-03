@@ -106,6 +106,11 @@ function PTY({index}:{index:number}) {
   </section>;
 }
 export default function TerminalWorkspaceView() {
+  const [windowsError,setWindowsError]=useState("");
+  const openNative=async()=>{
+    try {setWindowsError("");await post("/api/terminal/windows",{})}
+    catch(e){setWindowsError(e instanceof Error?e.message:"Windows Terminal unavailable")}
+  };
   return <div className="space-y-4">
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div className="flex items-center gap-2">
@@ -113,9 +118,12 @@ export default function TerminalWorkspaceView() {
         <div><h1 className="text-2xl font-semibold text-emerald-300">Kali · Live Terminals</h1>
           <p className="text-xs text-[#94a89a]">Real interactive bash sessions running on your Kali WSL machine; stdout and stderr streamed into this dashboard.</p></div>
       </div>
-      <a href="http://127.0.0.1:8917/" className="inline-flex items-center gap-2 text-xs text-emerald-400">
-        Local execution · 127.0.0.1 <ExternalLink className="h-3 w-3"/></a>
+      <button onClick={()=>void openNative()}
+        className="rounded-lg border border-emerald-800 px-3 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-950/30">
+        Open native Windows Terminal ↗
+      </button>
     </div>
+    {windowsError&&<p className="text-xs text-red-400">{windowsError}</p>}
     <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
       {[0,1,2].map(index=><PTY key={index} index={index}/>)}
     </div>
