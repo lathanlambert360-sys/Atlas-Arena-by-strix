@@ -7,16 +7,13 @@ import {
   Mail,
   LogOut,
   ChevronsUpDown,
-  Terminal,
-  Globe2,
-  Activity,
-  BookOpen,
 } from "lucide-react";
 import { LuGitPullRequestArrow } from "react-icons/lu";
 import { VscExtensions } from "react-icons/vsc";
 import { IoChatbubblesOutline } from "react-icons/io5";
 import { cn } from "@/lib/utils";
 import { ctaUrl, trackCta } from "@/lib/cta";
+import { UpgradeModal } from "@/components/UpgradeModal";
 import type { McpConnectionStatus } from "@/data/serverSource";
 import type { View } from "@/App";
 
@@ -33,8 +30,8 @@ const DEFAULT_WIDTH = 260;
 const MAX_WIDTH = 400;
 const COLLAPSE_THRESHOLD = 140;
 
-const WIDTH_KEY = "atlas_arena_sidebar_width";
-const COLLAPSE_KEY = "atlas_arena_sidebar_collapsed";
+const WIDTH_KEY = "strix_viewer_sidebar_width";
+const COLLAPSE_KEY = "strix_viewer_sidebar_collapsed";
 
 interface SidebarProps {
   view: View;
@@ -90,7 +87,15 @@ export default function Sidebar({
   });
   const [isResizing, setIsResizing] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [upgradeFeature, setUpgradeFeature] = useState<string | null>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Open the upgrade dialog for a platform feature, recording which feature
+  // drove the open (the dialog's own CTAs track the deeper conversion).
+  const openUpgrade = (slug: string, description: string) => {
+    trackCta(slug, "sidebar");
+    setUpgradeFeature(description);
+  };
 
   const persistWidth = useCallback((w: number) => {
     setWidth(w);
@@ -187,29 +192,33 @@ export default function Sidebar({
           <div className="flex flex-row py-1 px-2">
             <div className="flex h-10 w-full flex-row items-center">
               <a
-                href="/"
+                href={ctaUrl("https://app.strix.ai", "logo")}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackCta("logo", "sidebar")}
                 className="flex flex-1 flex-row items-center gap-2 rounded-md py-2 pl-2.5 pr-1 min-w-0 transition-colors hover:bg-[rgba(255,255,255,0.06)]"
-                title="Infinite Cyber Security — Atlas Arena"
+                title="Open Strix Cloud"
               >
-                <img src="/infinite-cyber-logo.svg" width={30} height={30} alt="Infinite Cyber Security official emblem"
-                  className="h-[30px] w-[30px] flex-shrink-0 rounded-full border border-cyan-400/50 shadow-[0_0_14px_#00dfff75]" />
+                <span
+                  className="flex flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500"
+                  style={{ width: 20, height: 20 }}
+                >
+                  <span className="text-[10px] font-semibold text-white">S</span>
+                </span>
                 <span className="flex flex-1 flex-row items-center gap-2 min-w-0">
-                  <span className="truncate min-w-0 text-[13px] font-semibold tracking-wide text-[#baf8ff] [text-shadow:0_0_9px_#00bfff80]">INFINITE CYBER SECURITY</span>
+                  <span className="truncate min-w-0 text-[14px] font-medium text-[#ededed]">Strix</span>
                   <span className="flex h-5 flex-shrink-0 items-center rounded px-2 text-[11px] font-medium text-[#888] bg-[rgba(255,255,255,0.08)]">
-                    HQ
+                    Local
                   </span>
                 </span>
               </a>
               <a
-                href={ctaUrl("https://chatgpt.com/", "logo")}
+                href={ctaUrl("https://app.strix.ai", "logo")}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackCta("logo", "sidebar")}
                 className="flex flex-none items-center rounded-md px-1.5 py-2 transition-colors hover:bg-[rgba(255,255,255,0.06)]"
-                aria-label="Open Atlas workspace"
+                aria-label="Open Strix Cloud"
               >
                 <ChevronsUpDown className="h-4 w-4 text-[#666]" />
               </a>
@@ -220,19 +229,6 @@ export default function Sidebar({
         {/* Navigation */}
         <nav className="relative min-w-[160px] flex-1 overflow-y-auto overflow-x-clip scrollbar-thin pb-10 pt-2">
           <div className="relative flex flex-col gap-px px-2">
-            <NavItem
-              icon={<IoChatbubblesOutline className="h-4 w-4" />}
-              label="Atlas Chat"
-              active={view === "chat"}
-              onClick={() => onSelectView("chat")}
-            />
-            <hr className="mx-0 my-1 h-px w-full border-0 bg-[rgba(255,255,255,0.08)]" />
-            <NavItem
-              icon={<Globe2 className="h-4 w-4" />}
-              label="Threat Intelligence"
-              active={view === "threats"}
-              onClick={() => onSelectView("threats")}
-            />
             <NavItem
               icon={<ProjectsIcon />}
               label="Pentest Overview"
@@ -246,32 +242,18 @@ export default function Sidebar({
               active={view === "issues"}
               onClick={() => onSelectView("issues")}
             />
-            <NavItem
-              icon={<Bot className="h-4 w-4" />}
-              label="Agents"
-              count={agentCount > 0 ? agentCount : undefined}
-              active={view === "agents"}
-              onClick={() => onSelectView("agents")}
-            />
-            <NavItem
-              icon={<Activity className="h-4 w-4" />}
-              label="Stats Tracker"
-              active={view === "stats"}
-              onClick={() => onSelectView("stats")}
-            />
-            <NavItem
-              icon={<BookOpen className="h-4 w-4" />}
-              label="Strix Knowledge"
-              active={view === "knowledge"}
-              onClick={() => onSelectView("knowledge")}
-            />
-            <NavItem
-              icon={<Terminal className="h-4 w-4" />}
-              label="Kali Terminal"
-              active={view === "terminal"}
-              onClick={() => onSelectView("terminal")}
-            />
-            <McpConnectionsPanel connections={mcpConnections} inUse={mcpInUse} />
+            {agentCount > 0 && (
+              <NavItem
+                icon={<Bot className="h-4 w-4" />}
+                label="Agents"
+                count={agentCount}
+                active={view === "agents"}
+                onClick={() => onSelectView("agents")}
+              />
+            )}
+            {mcpConnections.length > 0 && (
+              <McpConnectionsPanel connections={mcpConnections} inUse={mcpInUse} />
+            )}
             <NavItem
               icon={<History className="h-4 w-4" />}
               label="Past runs"
@@ -279,12 +261,14 @@ export default function Sidebar({
               active={view === "history"}
               onClick={onOpenHistory}
             />
-            <NavItem
-              icon={<Mail className="h-4 w-4" />}
-              label="Export report"
-              active={view === "email"}
-              onClick={onOpenEmail}
-            />
+            {finished && (
+              <NavItem
+                icon={<Mail className="h-4 w-4" />}
+                label="Export report"
+                active={view === "email"}
+                onClick={onOpenEmail}
+              />
+            )}
             <NavItem
               icon={<IoChatbubblesOutline className="h-4 w-4" />}
               label="Feedback & support"
@@ -297,20 +281,35 @@ export default function Sidebar({
             <NavItem
               icon={<LuGitPullRequestArrow className="h-4 w-4" />}
               label="PR Security Reviews"
-              active={view === "pr-reviews"}
-              onClick={() => onSelectView("pr-reviews")}
+              active={false}
+              onClick={() =>
+                openUpgrade(
+                  "pr_reviews",
+                  "Strix reviews every pull request and flags exploitable changes before they merge."
+                )
+              }
             />
             <NavItem
               icon={<VscExtensions className="h-4 w-4" />}
               label="Integrations"
-              active={view === "integrations"}
-              onClick={() => onSelectView("integrations")}
+              active={false}
+              onClick={() =>
+                openUpgrade(
+                  "integrations",
+                  "Sync findings to Jira, Linear, and Slack so fixes happen where your team already works."
+                )
+              }
             />
             <NavItem
               icon={<Users className="h-4 w-4" />}
               label="Members"
-              active={view === "members"}
-              onClick={() => onSelectView("members")}
+              active={false}
+              onClick={() =>
+                openUpgrade(
+                  "members",
+                  "Invite your team, set roles, and share findings and run history across your org."
+                )
+              }
             />
           </div>
         </nav>
@@ -342,7 +341,7 @@ export default function Sidebar({
                   className="flex flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500"
                   style={{ width: 20, height: 20 }}
                 >
-                  <span className="text-[9px] font-semibold text-white">∞</span>
+                  <span className="text-[9px] font-semibold text-white">S</span>
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col text-left">
                   <span className="truncate text-[13px] font-medium text-[#ededed]">Local viewer</span>
@@ -388,6 +387,12 @@ export default function Sidebar({
       {/* Overlay during resize to prevent text selection. */}
       {isResizing && <div className="fixed inset-0 z-10 cursor-col-resize" />}
 
+      <UpgradeModal
+        open={upgradeFeature !== null}
+        description={upgradeFeature ?? ""}
+        source="sidebar"
+        onClose={() => setUpgradeFeature(null)}
+      />
     </>
   );
 }

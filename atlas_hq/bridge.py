@@ -144,7 +144,11 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(data)))
         self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
-        self.wfile.write(data)
+        try:
+            self.wfile.write(data)
+        except BrokenPipeError:
+            # Browser navigation can cancel an in-flight polling request.
+            return
 
     def do_GET(self):
         url = urlsplit(self.path)

@@ -324,15 +324,3 @@ body {
   color: #ccc;
   font-weight: 600;
 }
-
-
-/* Infinite Cyber Security official brand: near-black / metallic / neon cyan. */
-:root {
-  --infinite-neon-cyan: #00e5ff;
-  --infinite-electric-blue: #158dff;
-  --infinite-obsidian: #01070d;
-  color-scheme: dark;
-}
-::selection { background: #007c9e; color: #f7ffff; }
-:focus-visible { outline: 2px solid var(--infinite-neon-cyan); outline-offset: 2px; }
-button:not(:disabled):hover { transition: box-shadow 120ms ease; }

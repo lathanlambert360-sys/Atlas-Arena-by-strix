@@ -39,15 +39,6 @@ import {
 import { SIGNUP_URL, DEMO_URL, ctaUrl, trackCta } from "@/lib/cta";
 import { runTitle } from "@/lib/target-utils";
 import Sidebar from "@/components/Sidebar";
-import IndependentWorkspaceView from "@/components/IndependentWorkspaceView";
-import LocalReportExport from "@/components/LocalReportExport";
-import TerminalWorkspaceView from "@/components/TerminalWorkspaceView";
-import LiveOperationsOverview from "@/components/LiveOperationsOverview";
-import LiveStatsView from "@/components/LiveStatsView";
-import KnowledgeView from "@/components/KnowledgeView";
-import LiveAgentGraph from "@/components/LiveAgentGraph";
-import AtlasChatView from "@/components/AtlasChatView";
-import ThreatGlobeView from "@/components/ThreatGlobeView";
 import PastRunsView from "@/components/PastRunsView";
 import EmailReportView from "@/components/EmailReportView";
 import { RunDetails } from "@/components/RunDetails";
@@ -55,10 +46,10 @@ import { TrustToast } from "@/components/TrustToast";
 import FeedbackView from "@/components/FeedbackView";
 import { ProInlineCta } from "@/components/ProCta";
 
-export type View = "knowledge" | "stats" | "threats" | "chat" | "overview" | "issues" | "agents" | "history" | "email" | "feedback" | "pr-reviews" | "integrations" | "members" | "terminal";
+export type View = "overview" | "issues" | "agents" | "history" | "email" | "feedback";
 
 const TRUST_BANNER =
-  "Atlas Arena is independent. Connect providers to enable live agent runs; no scans are started automatically.";
+  "Your findings stay on your machine. They're rendered here locally in your browser and never uploaded or stored by Strix.";
 
 const SEVERITY_ORDER: VulnerabilitySeverity[] = ["critical", "high", "medium", "low"];
 const POLL_MS = 500;
@@ -68,7 +59,7 @@ export default function App() {
   const [run, setRun] = useState<LoadedRun | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [view, setView] = useState<View>("threats");
+  const [view, setView] = useState<View>("overview");
   const [auth, setAuth] = useState<AuthStatus | null>(null);
   const [runs, setRuns] = useState<RunsPayload | null>(null);
   const [emailPurpose, setEmailPurpose] = useState<"report" | "verify">("report");
@@ -214,7 +205,6 @@ export default function App() {
 
   useEffect(() => {
     if (initialViewAppliedRef.current || !run) return;
-    if (view === "chat" || view === "threats" || view === "knowledge" || view === "stats") { initialViewAppliedRef.current = true; return; }
     if (run.finished) {
       initialViewAppliedRef.current = true;
       setView("overview");
@@ -300,15 +290,15 @@ export default function App() {
         <div className="border-b border-[#222]">
           <div className="max-w-[88rem] mx-auto px-3 sm:px-6 py-4 flex items-center gap-1.5">
             <a
-              href={ctaUrl("https://chatgpt.com/", "logo")}
+              href={ctaUrl("https://app.strix.ai", "logo")}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => trackCta("logo", "topbar")}
               className="flex items-center gap-1.5 opacity-90 transition-opacity hover:opacity-100 lg:hidden"
-              title="Open Atlas workspace"
+              title="Open Strix Cloud"
             >
-              <span className="inline-flex h-8 w-10 items-center justify-center text-xl font-bold" aria-label="Atlas Arena">∞</span>
-              <div className="text-base text-white font-medium tracking-tight">ATLAS ARENA</div>
+              <img src="./logo.png" alt="Strix" className="w-10 h-8 object-cover" />
+              <div className="text-base text-white font-medium tracking-tight">Strix</div>
             </a>
             {run && <LiveIndicator finished={run.finished} />}
             <div className="ml-auto flex items-center gap-3">
@@ -327,7 +317,7 @@ export default function App() {
                 onClick={() => trackCta("run_in_cloud", "topbar")}
                 className="inline-flex items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-black transition-opacity hover:opacity-90"
               >
-                Work with Atlas
+                Run in the cloud
                 <ArrowUpRight className="w-3 h-3" aria-hidden="true" />
               </a>
             </div>
@@ -348,17 +338,7 @@ export default function App() {
             key={`${activeRun ?? "launched"}:${view}:${selectedId ?? ""}`}
             className="animate-page-in space-y-6"
           >
-          {view === "knowledge" ? (
-             <KnowledgeView />
-           ) : view === "stats" ? (
-             <LiveStatsView />
-           ) : view === "threats" ? (
-            <ThreatGlobeView />
-          ) : view === "chat" ? (
-            <AtlasChatView />
-          ) : view === "email" ? (
-            <div className="space-y-6">
-              <LocalReportExport run={run} />
+          {view === "email" ? (
             <EmailReportView
               activeRun={activeRun}
               auth={auth}
@@ -370,16 +350,11 @@ export default function App() {
               }}
               onExit={(dest) => setView(dest === "history" ? "history" : "overview")}
             />
-            </div>
           ) : view === "feedback" ? (
             <FeedbackView
               defaultEmail={auth?.email ?? null}
               onExit={(dest) => setView(dest)}
             />
-          ) : view === "terminal" ? (
-            <TerminalWorkspaceView />
-          ) : view === "pr-reviews" || view === "integrations" || view === "members" ? (
-            <IndependentWorkspaceView page={view} connections={mcpConnections} />
           ) : view === "history" ? (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
@@ -410,9 +385,11 @@ export default function App() {
                 <TabButton active={view === "issues"} onClick={() => userSetView("issues")}>
                   Issues{run.vulnerabilities.length > 0 ? ` (${run.vulnerabilities.length})` : ""}
                 </TabButton>
-                <TabButton active={view === "agents"} onClick={() => userSetView("agents")}>
-                  Agents ({agentCount})
-                </TabButton>
+                {agentCount > 0 && (
+                  <TabButton active={view === "agents"} onClick={() => userSetView("agents")}>
+                    Agents ({agentCount})
+                  </TabButton>
+                )}
               </div>
 
               {view === "overview" ? (
@@ -425,7 +402,7 @@ export default function App() {
                   finished={run.finished}
                   onOpenEmail={openEmailFromOverview}
                 />
-              ) : view === "agents" ? (
+              ) : view === "agents" && agentCount > 0 ? (
                 <AgentsTab run={run} canSteer={canSteer} />
               ) : selected ? (
                 <div className="space-y-4">
@@ -712,8 +689,6 @@ function OverviewTab({
 
   return (
     <div className="space-y-6">
-      <LiveOperationsOverview />
-      <LiveStatsView compact />
       <div className="animate-card-in">
         <RunDetails raw={raw} durationSeconds={summary.durationSeconds} />
       </div>
@@ -734,11 +709,11 @@ function OverviewTab({
 
       {finished && (
         <div className="animate-card-in rounded-xl border border-[#222] bg-[rgba(255,255,255,0.02)] p-5">
-          <p className="text-sm font-semibold text-white">Atlas Arena</p>
-          <p className="mt-0.5 text-xs text-[#666]">Run your next pentest in Atlas Arena.</p>
+          <p className="text-sm font-semibold text-white">Strix Cloud</p>
+          <p className="mt-0.5 text-xs text-[#666]">Run your next pentest in Strix Cloud.</p>
           <div className="mt-3 flex flex-wrap gap-2.5">
             <ProInlineCta
-              label="Run a pentest in Atlas Arena"
+              label="Run a pentest in Strix Cloud"
               desc="Validated findings, autofix, and PR reviews."
               slug="overview_cloud"
               surface="overview"
@@ -746,7 +721,7 @@ function OverviewTab({
               primary
             />
             <ProInlineCta
-              label="Try Atlas services"
+              label="Try Strix Enterprise"
               desc="SSO, compliance-ready reports, VPC or self-hosted deployment."
               slug="book_demo"
               surface="overview"
@@ -811,18 +786,16 @@ function AgentsTab({ run, canSteer }: { run: LoadedRun; canSteer: boolean }) {
 
   return (
     <div className="space-y-5">
-      <LiveOperationsOverview compact />
-      <LiveAgentGraph />
       <div className="rounded-xl border border-[#222] bg-[rgba(255,255,255,0.02)] p-5">
         <div className="flex items-center gap-2">
           <Bot className="w-4 h-4 text-[#888]" aria-hidden="true" />
-          <h2 className="text-sm font-semibold text-white">Archived run agent graph</h2>
+          <h2 className="text-sm font-semibold text-white">Agent graph</h2>
           <span className="text-xs text-[#666]">
             {agents.length} agent{agents.length === 1 ? "" : "s"}
           </span>
         </div>
         <p className="mt-1 mb-4 text-xs text-[#666]">
-          Archived run agent graph. Click an agent to open its recorded transcript; live OrcaCyber status is shown above.
+          Click an agent to open its full transcript.
         </p>
         <div className="h-[480px] rounded-lg border border-[#1a1a1a] overflow-hidden">
           <AgentGraph
@@ -839,13 +812,13 @@ function AgentsTab({ run, canSteer }: { run: LoadedRun; canSteer: boolean }) {
       {/* Live steering: only in-process while the scan runs. Otherwise omitted. */}
       {steerable && <ScanPromptComposer agents={agents} />}
 
-      {/* Re-run always routes to Atlas Arena. */}
+      {/* Re-run always routes to Strix Cloud. */}
       <div className="rounded-xl border border-[#222] bg-[rgba(255,255,255,0.02)] p-5">
         <p className="text-sm font-semibold text-white">Run this pentest with more depth</p>
-        <p className="mt-0.5 text-xs text-[#666]">Run this pentest again in Atlas Arena.</p>
+        <p className="mt-0.5 text-xs text-[#666]">Run this pentest again in Strix Cloud.</p>
         <div className="mt-3 flex flex-wrap gap-2.5">
           <ProInlineCta
-            label="Re-run in Atlas Arena with more depth"
+            label="Re-run in Strix Pro with more depth"
             desc="More depth, validated findings, and autofix."
             slug="live_scan"
             surface="agents"
@@ -853,7 +826,7 @@ function AgentsTab({ run, canSteer }: { run: LoadedRun; canSteer: boolean }) {
             primary
           />
           <ProInlineCta
-            label="Try Atlas services"
+            label="Try Strix Enterprise"
             desc="SSO, compliance-ready reports, VPC or self-hosted deployment."
             slug="book_demo"
             surface="agents"

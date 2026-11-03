@@ -21,9 +21,15 @@ if [[ -z "${ORCAROUTER_API_KEY:-}" && -t 0 ]]; then
   fi
 fi
 if [[ -n "${ORCAROUTER_API_KEY:-}" ]]; then
-  echo "[Atlas HQ] OrcaCyber configured: orca/orcacyber-flash-1.0-free"
+  # Configure the unmodified Strix engine through its native OpenAI-compatible
+  # provider settings.  The viewer remains the upstream Strix viewer.
+  export STRIX_LLM="openai/orca/orcacyber-flash-1.0-free"
+  export LLM_API_BASE="https://api.orcarouter.ai/v1"
+  export LLM_API_KEY="$ORCAROUTER_API_KEY"
+  export STRIX_API_TYPE="chat_completions"
+  echo "[Strix] OrcaCyber configured: $STRIX_LLM"
 else
-  echo "[Atlas HQ] OrcaRouter key not configured; Codex fallback remains available"
+  echo "[Strix] OrcaRouter key not configured"
 fi
 FRONT="$ROOT/strix/interface/viewer/frontend"
 SITE="$ROOT/strix/interface/viewer/static"
@@ -37,7 +43,7 @@ elif [[ "$FRONT/package-lock.json" -nt "$SITE/index.html" ]]; then REBUILD=1
 elif find "$FRONT/src" -type f -newer "$SITE/index.html" -print -quit | grep -q .; then REBUILD=1
 fi
 if [[ "$REBUILD" == 1 ]]; then
-  echo "[Atlas HQ] One-time viewer build from independent source."
+  echo "[Strix] Building the restored upstream viewer."
   cd "$FRONT"
   if [[ ! -d node_modules ]]; then
     if [[ -f package-lock.json ]]; then npm ci --no-audit --no-fund; else npm install --no-audit --no-fund; fi
