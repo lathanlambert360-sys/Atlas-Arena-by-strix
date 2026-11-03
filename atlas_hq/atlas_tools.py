@@ -66,3 +66,15 @@ def status():
         "mcp_bridge":bridge,
         "references":references()
     }
+
+
+def strix_agent_context():
+    """Original Strix OSS agent guide, read straight from checked-out repository."""
+    root=Path(__file__).resolve().parents[1]
+    excerpts=[]
+    for relative in ("AGENTS.md","README.md"):
+        file=root/relative
+        if not file.is_file():continue
+        text=file.read_text(encoding="utf-8",errors="replace")
+        excerpts.append(relative+"\n"+text[:3200])
+    return "\n\n".join(excerpts)[:6200]
