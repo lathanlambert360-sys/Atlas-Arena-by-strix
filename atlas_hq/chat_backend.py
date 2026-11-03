@@ -112,7 +112,7 @@ def state(db):
         proc=AUTH["process"]
         device={"running":bool(proc and proc.poll() is None),
                 "output":"\n".join(AUTH["lines"])[-2800:]}
-    return {"available":orca_ready() or bool(codex_exe()),"authenticated":orca_ready() or auth_status(),
+    return {"available":orca_ready() or bool(codex_exe()),"authenticated":(True if orca_ready() else auth_status()),
             "session":{"status":row["status"],"updated":row["updated"],"error":row["error"]},
             "messages":list(reversed(msgs)),"device_auth":device,
             "engine":("OrcaCyber Flash (OrcaRouter)" if orca_ready() else "Local Codex CLI"),
