@@ -42,7 +42,8 @@ if ! check_port 8001; then
 else
   echo "[Atlas] Atlas MCP HTTP :8001 already listening"
 fi
-echo "[Atlas] Original MCP bridge :8000 remains available for your T3 tunnel"
+echo "[Atlas] Original MCP bridge :8000 is available for your T3 tunnel"
+echo "[Atlas] T3 startup: bash $ROOT/atlas_hq/start_tunnel.sh"
 echo "[Atlas] HexStrike logs: $LOG_DIR"
 echo "[Atlas] Starting OrcaCyber dashboard :8917"
 exec bash "$ROOT/atlas_hq/start.sh"
