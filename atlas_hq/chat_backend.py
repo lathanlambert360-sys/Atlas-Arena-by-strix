@@ -8,6 +8,8 @@ No API keys or shell-command parameters are accepted through the HTTP API.
 from __future__ import annotations
 import json
 import atlas_tools
+import atlas_actions
+import mcp_client
 import os
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
@@ -122,6 +124,8 @@ def state(db):
             "model":ORCA_MODEL if orca_ready() else None,
             "model_check":dict(ORCA_CHECK),
             "reference_archives":atlas_tools.references(),
+            "mcp":mcp_client.inspect(),
+            "tool_requests":atlas_actions.pending(db),
             "sandbox":"read-only"}
 
 def send(db, workspace, message):
@@ -271,6 +275,7 @@ def _orca_worker(db):
             "SELECT role,content FROM atlas_chat_message ORDER BY rowid DESC LIMIT 24"
         ).fetchall()]
     evidence = atlas_tools.status()
+    mcp = mcp_client.inspect()
     references = _references_for_model()
     messages = [{"role":"system","content":(
         "You are Atlas HQ's cybersecurity research assistant. "
@@ -280,9 +285,15 @@ def _orca_worker(db):
         "distinguish confirmed tests from hypotheses and do not invent tool output. "
         "Keep answers concise and directly responsive. "
         "Real local integration observations: "+json.dumps(evidence,ensure_ascii=False)[:6000]+
+        "\nLive HexStrike MCP tool inventory: "+json.dumps(mcp,ensure_ascii=False)[:7500]+
         "\nOriginal reference document excerpts:\n"+references+
         "\nThe dashboard supports /atlas status, /atlas refs <id>, "
-        "and /atlas read <id> <member-path>. Do not claim to execute tools directly."
+        "and /atlas read <id> <member-path>. "
+        "When an MCP tool is needed, propose ONE JSON request in this format: "
+        '<atlas_tool>{"name":"nmap_scan","arguments":{"target":"authorized.example"},'
+        '"reason":"why the test matters"}</atlas_tool>. '
+        "Use only tools named in the live inventory. Never claim to have run a tool "
+        "until real tool output appears in the conversation. Operator approval is required."
     )}] + list(reversed(history))
     payload = json.dumps({"model":ORCA_MODEL,"messages":messages,
                           "stream":False}).encode("utf-8")
@@ -296,6 +307,9 @@ def _orca_worker(db):
         with urlopen(req,timeout=120) as reply:
             response = json.load(reply)
         answer = response["choices"][0]["message"]["content"]
+        queued = atlas_actions.propose(db,answer) if isinstance(answer,str) else None
+        if queued:
+            answer += "\n\nHexStrike MCP tool call awaiting operator approval: "+queued
         with LOCK:
             ORCA_CHECK.update(verified=True,checked=True,error=None)
         if not isinstance(answer,str) or not answer.strip():
