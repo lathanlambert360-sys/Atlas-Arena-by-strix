@@ -10,6 +10,7 @@ const PRESETS=[
   {label:"HexStrike API",command:"cd ~/tools/hexstrike-ai && source hexstrike-env/bin/activate && python3 -u hexstrike_server.py --port 8888"},
   {label:"MCP Bridge",command:"cd ~/tools/hexstrike-ai && source hexstrike-env/bin/activate && python3 hexstrike_mcp.py --server http://127.0.0.1:8888 --timeout 600"},
   {label:"Atlas Diagnostics",command:"cd ~/Atlas-Arena-by-strix && python3 -c 'import sys;sys.path.insert(0,\"atlas_hq\");import mcp_client;print(mcp_client.inspect())'"},
+  {label:"OpenAI Tunnel (T3)",command:"bash ~/Atlas-Arena-by-strix/atlas_hq/start_tunnel.sh"},
 ];
 async function post(path:string,body:Record<string,unknown>):Promise<{ok:boolean;error?:string}> {
   const res=await fetch(path,{method:"POST",credentials:"same-origin",
