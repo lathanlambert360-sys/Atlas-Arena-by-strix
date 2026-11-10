@@ -115,7 +115,7 @@ def strix_knowledge_manifest():
     """Inspectable, original repository evidence; hashes are of local bytes."""
     root=Path(__file__).resolve().parents[1]
     all_paths=[]
-    for prefix in ("strix","AGENTS.md","README.md"):
+    for prefix in ("strix","skills","AGENTS.md","README.md"):
         base=root/prefix
         if base.is_file():
             all_paths.append(base)
@@ -146,7 +146,7 @@ def strix_document(path):
     root=Path(__file__).resolve().parents[1]
     file=(root/path).resolve()
     if not file.is_relative_to(root):raise ValueError("Path outside repository")
-    if path not in ("AGENTS.md","README.md") and not path.startswith("strix/"):
+    if path not in ("AGENTS.md","README.md") and not path.startswith("strix/") and not path.startswith("skills/"):
         raise ValueError("Unknown Strix knowledge path")
     if file.suffix.lower() not in (".md",".txt",".rst",".yaml",".yml",".toml"):
         raise ValueError("Only documentation files may be read")

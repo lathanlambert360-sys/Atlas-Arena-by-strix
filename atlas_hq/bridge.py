@@ -17,6 +17,8 @@ import chat_backend
 import atlas_actions
 import live_terminal
 import atlas_tools
+import strix_gateway
+import geo_telemetry
 from urllib.request import urlopen
 from urllib.error import URLError, HTTPError
 from datetime import datetime, timezone
@@ -175,6 +177,22 @@ class Handler(SimpleHTTPRequestHandler):
             return super().do_GET()
         endpoint = url.path[5:]
         args = parse_qs(url.query)
+        if endpoint == "globe/telemetry":
+            with connect(self.server.db) as db:
+                return self.reply(200, geo_telemetry.observed_events(db))
+        if endpoint == "strix/catalog":
+            return self.reply(200, strix_gateway.catalog())
+        if endpoint == "strix/connection":
+            return self.reply(200, strix_gateway.connection())
+        if endpoint == "strix/query":
+            op_id = args.get("op", [""])[0]
+            operation = next((o for o in strix_gateway.catalog()["operations"]
+                              if o["id"] == op_id), None)
+            if not operation or operation["method"] != "GET":
+                return self.reply(400, {"error": "read_operation_required"})
+            params = {key: val[0] for key, val in args.items() if key != "op"}
+            code, body = strix_gateway.execute(op_id, params)
+            return self.reply(code, body)
         if endpoint == "terminal/status":
             return self.reply(200,{"sessions":live_terminal.status()})
         if endpoint == "terminal/output":
@@ -252,6 +270,48 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         endpoint = urlsplit(self.path).path
+        if endpoint == "/api/strix/execute":
+            # Same-origin browser session, without the ingest-token shortcut.
+            cookies = SimpleCookie()
+            try:
+                cookies.load(self.headers.get("Cookie", ""))
+                session = cookies["atlas_hq_session"].value if "atlas_hq_session" in cookies else ""
+            except Exception:
+                session = ""
+            if not secrets.compare_digest(session, self.server.token):
+                return self.reply(403, {"error": "local_viewer_session_required"})
+            origin = self.headers.get("Origin", "")
+            allowed = {"http://127.0.0.1:" + str(self.server.server_port),
+                       "http://localhost:" + str(self.server.server_port)}
+            public_origin = os.environ.get("ATLAS_HQ_PUBLIC_ORIGIN", "").rstrip("/")
+            if public_origin.startswith("https://") and public_origin.count("/") == 2:
+                allowed.add(public_origin)
+            if origin not in allowed:
+                return self.reply(403, {"error": "same_origin_required"})
+            try:
+                size = int(self.headers.get("Content-Length", "0"))
+                if size <= 0 or size > MAX_BODY:
+                    return self.reply(413, {"error": "invalid_message_size"})
+                req = json.loads(self.rfile.read(size))
+                if not isinstance(req, dict):
+                    return self.reply(400, {"error": "invalid_request"})
+                op_id = req.get("operation_id", "")
+                operation = next((o for o in strix_gateway.catalog()["operations"]
+                                  if o["id"] == op_id), None)
+                if not operation:
+                    return self.reply(404, {"error": "unknown_operation"})
+                if operation["method"] != "GET" and req.get("confirmed") is not True:
+                    return self.reply(403, {"error": "explicit_confirmation_required"})
+                # Launches/reruns require the operator to attest target authorization.
+                if operation["method"] != "GET" and any(word in op_id.lower()
+                        for word in ("scan", "pentest", "discovery", "retest", "review", "schedule")):
+                    if req.get("authorized") is not True:
+                        return self.reply(403, {"error": "authorized_scope_required"})
+                code, body = strix_gateway.execute(
+                    op_id, req.get("parameters"), req.get("body"))
+                return self.reply(code, body)
+            except (json.JSONDecodeError, ValueError, TypeError):
+                return self.reply(400, {"error": "invalid_json_request"})
         if endpoint in ("/api/chat", "/api/chat/auth/start", "/api/chat/model/test", "/api/chat/tool/decide", "/api/terminal/start", "/api/terminal/input", "/api/terminal/resize", "/api/terminal/stop", "/api/terminal/windows"):
             # Chat actions require the local browser session and a same-origin POST.
             cookies = SimpleCookie()
